@@ -836,7 +836,7 @@ HTML_INDEX = '''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>{{ settings.site_name }} - Décoration d'intérieur</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -846,23 +846,23 @@ HTML_INDEX = '''
         }
 
         :root {
-            --primary: #FFD700;
-            --primary-dark: #DAA520;
-            --primary-light: #FFF8DC;
-            --secondary: #F5C518;
-            --accent: #FF8C00;
-            --accent-light: #FFA500;
-            --gold-dark: #B8860B;
+            --primary: #FF69B4;
+            --primary-dark: #DB2777;
+            --primary-light: #FCE7F3;
+            --secondary: #A855F7;
+            --secondary-light: #C084FC;
+            --accent: #EC4899;
+            --accent-light: #F472B6;
             --dark: #1A1A2E;
             --gray-dark: #2D2D3D;
             --gray: #6B6B7B;
-            --gray-light: #FDF8E7;
+            --gray-light: #FDF2F8;
             --white: #FFFFFF;
-            --white-smoke: #FFFDF5;
+            --white-smoke: #FFF5F7;
             --shadow-sm: 0 5px 20px rgba(0,0,0,0.08);
             --shadow-md: 0 10px 35px rgba(0,0,0,0.12);
             --shadow-lg: 0 20px 50px rgba(0,0,0,0.15);
-            --shadow-glow: 0 0 30px rgba(255, 215, 0, 0.5);
+            --shadow-glow: 0 0 30px rgba(255, 105, 180, 0.5);
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -880,9 +880,9 @@ HTML_INDEX = '''
         }
 
         @keyframes pulse-glow {
-            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.5); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 105, 180, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 105, 180, 0); }
         }
 
         @keyframes shine {
@@ -902,8 +902,8 @@ HTML_INDEX = '''
 
         /* Top Bar */
         .top-bar {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
+            color: white;
             padding: 8px 0;
             font-size: 13px;
             position: relative;
@@ -918,7 +918,7 @@ HTML_INDEX = '''
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
             animation: shine 3s infinite;
         }
 
@@ -934,7 +934,7 @@ HTML_INDEX = '''
         }
 
         .top-bar a {
-            color: var(--dark);
+            color: white;
             text-decoration: none;
             margin-left: 25px;
             transition: var(--transition);
@@ -942,7 +942,7 @@ HTML_INDEX = '''
         }
 
         .top-bar a:hover {
-            color: var(--white);
+            color: var(--primary-light);
             transform: translateY(-2px);
         }
 
@@ -971,7 +971,7 @@ HTML_INDEX = '''
         .logo h1 {
             font-size: 28px;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1018,7 +1018,7 @@ HTML_INDEX = '''
             left: 0;
             width: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark), var(--gold-dark));
+            background: linear-gradient(90deg, #FF69B4, #DB2777, #A855F7);
             transition: var(--transition);
         }
 
@@ -1061,19 +1061,19 @@ HTML_INDEX = '''
         }
 
         .submenu li a:hover {
-            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(90deg, #FF69B4 0%, #DB2777 100%);
+            color: white;
             padding-left: 32px;
             font-weight: 600;
         }
 
         .menu-toggle {
             display: none;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: var(--dark);
+            color: white;
             width: 45px;
             height: 45px;
             border-radius: 12px;
@@ -1107,7 +1107,7 @@ HTML_INDEX = '''
 
         .cart-icon:hover {
             background: var(--primary);
-            color: var(--dark);
+            color: white;
             transform: scale(1.05);
         }
 
@@ -1116,7 +1116,7 @@ HTML_INDEX = '''
             top: -5px;
             right: -5px;
             background: var(--primary);
-            color: var(--dark);
+            color: white;
             font-size: 10px;
             font-weight: bold;
             width: 20px;
@@ -1151,7 +1151,7 @@ HTML_INDEX = '''
         }
 
         .slide.active { opacity: 1; }
-        .slide img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); }
+        .slide img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); }
 
         .slide-content {
             position: absolute;
@@ -1204,8 +1204,8 @@ HTML_INDEX = '''
         .slider-next { right: 30px; }
 
         .slider-prev:hover, .slider-next:hover {
-            background: var(--primary);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
+            color: white;
             transform: translateY(-50%) scale(1.1);
         }
 
@@ -1231,14 +1231,14 @@ HTML_INDEX = '''
         .dot.active {
             width: 30px;
             border-radius: 10px;
-            background: var(--primary);
-            box-shadow: 0 0 10px var(--primary);
+            background: #FF69B4;
+            box-shadow: 0 0 10px #FF69B4;
         }
 
         /* Hero Section */
         .hero {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
+            color: white;
             padding: 100px 0;
             text-align: center;
             position: relative;
@@ -1252,7 +1252,7 @@ HTML_INDEX = '''
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
             animation: pulse-glow 4s ease-in-out infinite;
         }
 
@@ -1270,7 +1270,7 @@ HTML_INDEX = '''
             margin-bottom: 35px;
             opacity: 0.95;
             position: relative;
-            color: var(--dark);
+            color: white;
             font-weight: 500;
         }
 
@@ -1307,8 +1307,8 @@ HTML_INDEX = '''
         .btn:hover::before { left: 100%; }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 100%);
+            color: white;
             box-shadow: var(--shadow-md);
             animation: pulse-glow 2s infinite;
             font-weight: 700;
@@ -1321,14 +1321,14 @@ HTML_INDEX = '''
         }
 
         .btn-outline {
-            border: 2px solid var(--primary);
-            color: var(--primary-dark);
+            border: 2px solid #FF69B4;
+            color: #DB2777;
             background: transparent;
         }
 
         .btn-outline:hover {
-            background: var(--primary);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
+            color: white;
             transform: translateY(-3px);
             box-shadow: var(--shadow-glow);
         }
@@ -1342,7 +1342,7 @@ HTML_INDEX = '''
             font-size: 42px;
             font-weight: 800;
             margin-bottom: 15px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1391,7 +1391,7 @@ HTML_INDEX = '''
             left: 0;
             width: 100%;
             height: 5px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark), var(--gold-dark));
+            background: linear-gradient(90deg, #FF69B4, #DB2777, #A855F7);
             transform: scaleX(0);
             transition: var(--transition);
         }
@@ -1401,11 +1401,10 @@ HTML_INDEX = '''
 
         .category-icon { font-size: 56px; margin-bottom: 20px; display: inline-block; transition: var(--transition); }
         .category-card:hover .category-icon { transform: scale(1.1) rotate(5deg); }
-        .category-card h3 { font-size: 20px; margin-bottom: 10px; font-weight: 700; color: var(--primary-dark); }
+        .category-card h3 { font-size: 20px; margin-bottom: 10px; font-weight: 700; color: #DB2777; }
         .category-card p { color: var(--gray); font-size: 14px; }
 
-        /* ========== GRILLE PRODUITS PREMIUM ========== */
-        
+        /* Products Section */
         .products-section {
             padding: 80px 0;
             background: var(--white-smoke);
@@ -1425,7 +1424,7 @@ HTML_INDEX = '''
         .products-header h2 {
             font-size: 42px;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1483,8 +1482,8 @@ HTML_INDEX = '''
             position: absolute;
             top: 16px;
             left: 16px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 100%);
+            color: white;
             padding: 6px 14px;
             border-radius: 30px;
             font-size: 12px;
@@ -1529,12 +1528,12 @@ HTML_INDEX = '''
         }
 
         .overlay-btn-cart {
-            background: var(--primary);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
+            color: white;
         }
 
         .overlay-btn-cart:hover {
-            background: var(--primary-dark);
+            background: linear-gradient(135deg, #DB2777, #A855F7);
             transform: scale(1.02);
         }
 
@@ -1574,7 +1573,7 @@ HTML_INDEX = '''
         }
 
         .product-title a:hover {
-            color: var(--primary-dark);
+            color: #DB2777;
         }
 
         .product-price-wrapper {
@@ -1588,7 +1587,7 @@ HTML_INDEX = '''
         .product-price {
             font-size: 22px;
             font-weight: 800;
-            color: var(--primary-dark);
+            color: #DB2777;
         }
 
         .product-old-price {
@@ -1607,7 +1606,7 @@ HTML_INDEX = '''
 
         .product-rating i {
             font-size: 12px;
-            color: var(--primary);
+            color: #FF69B4;
         }
 
         .product-rating span {
@@ -1621,8 +1620,8 @@ HTML_INDEX = '''
             width: 100%;
             margin-top: 15px;
             padding: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 100%);
+            color: white;
             border: none;
             border-radius: 40px;
             font-weight: 700;
@@ -1660,7 +1659,7 @@ HTML_INDEX = '''
 
         .feature-icon {
             font-size: 48px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark), var(--gold-dark));
+            background: linear-gradient(135deg, #FF69B4, #DB2777, #A855F7);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1687,7 +1686,7 @@ HTML_INDEX = '''
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark), var(--gold-dark), var(--primary));
+            background: linear-gradient(90deg, #FF69B4, #DB2777, #A855F7, #FF69B4);
         }
 
         .footer-grid {
@@ -1704,7 +1703,7 @@ HTML_INDEX = '''
             margin-bottom: 25px;
             position: relative;
             display: inline-block;
-            color: var(--primary);
+            color: #FF69B4;
         }
 
         .footer-col h4::after {
@@ -1714,7 +1713,7 @@ HTML_INDEX = '''
             left: 0;
             width: 40px;
             height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(90deg, #FF69B4, #DB2777);
         }
 
         .footer-col a {
@@ -1726,7 +1725,7 @@ HTML_INDEX = '''
             transition: var(--transition);
         }
 
-        .footer-col a:hover { color: var(--primary); transform: translateX(8px); }
+        .footer-col a:hover { color: #FF69B4; transform: translateX(8px); }
 
         .social-links {
             display: flex;
@@ -1747,8 +1746,8 @@ HTML_INDEX = '''
         }
 
         .social-links a:hover {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
+            color: white;
             transform: translateY(-5px);
             box-shadow: var(--shadow-glow);
         }
@@ -1798,7 +1797,7 @@ HTML_INDEX = '''
             align-items: center;
         }
 
-        .cart-header h3 { font-size: 22px; font-weight: 700; color: var(--primary-dark); }
+        .cart-header h3 { font-size: 22px; font-weight: 700; color: #DB2777; }
         .cart-header button {
             background: none;
             border: none;
@@ -1813,7 +1812,7 @@ HTML_INDEX = '''
 
         .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
         .cart-footer { padding: 25px; border-top: 1px solid var(--gray-light); }
-        .cart-total { display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--primary-dark); }
+        .cart-total { display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; margin-bottom: 20px; color: #DB2777; }
 
         .cart-item {
             display: flex;
@@ -1823,7 +1822,7 @@ HTML_INDEX = '''
         }
         .cart-item-details { flex: 1; }
         .cart-item-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--dark); }
-        .cart-item-price { color: var(--primary-dark); font-size: 14px; font-weight: 700; }
+        .cart-item-price { color: #DB2777; font-size: 14px; font-weight: 700; }
         .cart-item-quantity { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
         .quantity-btn {
             width: 26px;
@@ -1834,15 +1833,15 @@ HTML_INDEX = '''
             cursor: pointer;
             transition: var(--transition);
         }
-        .quantity-btn:hover { background: var(--primary); border-color: var(--primary); }
+        .quantity-btn:hover { background: linear-gradient(135deg, #FF69B4, #DB2777); border-color: #FF69B4; color: white; }
 
         /* Toast */
         .toast {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--dark);
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
+            color: white;
             padding: 15px 25px;
             border-radius: 50px;
             z-index: 2004;
@@ -1862,7 +1861,7 @@ HTML_INDEX = '''
             right: 20px;
             width: 55px;
             height: 55px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, #FF69B4, #DB2777);
             border-radius: 50%;
             align-items: center;
             justify-content: center;
@@ -1876,10 +1875,10 @@ HTML_INDEX = '''
 
         /* Newsletter Section */
         .newsletter {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, var(--gold-dark) 100%);
+            background: linear-gradient(135deg, #FF69B4 0%, #DB2777 50%, #A855F7 100%);
             padding: 60px 0;
             text-align: center;
-            color: var(--dark);
+            color: white;
             position: relative;
             overflow: hidden;
         }
@@ -1906,10 +1905,10 @@ HTML_INDEX = '''
             min-width: 250px;
             transition: var(--transition);
         }
-        .newsletter-form input:focus { outline: none; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        .newsletter-form input:focus { outline: none; box-shadow: 0 0 20px rgba(255,105,180,0.3); }
         .newsletter-form button { padding: 14px 30px; }
 
-        /* ========== MODALS ========== */
+        /* Modals */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -1938,7 +1937,7 @@ HTML_INDEX = '''
             max-height: 90vh;
             overflow-y: auto;
             z-index: 2003;
-            border: 2px solid var(--primary);
+            border: 2px solid #FF69B4;
             box-shadow: var(--shadow-lg);
         }
 
@@ -1957,12 +1956,12 @@ HTML_INDEX = '''
         }
         .auth-modal .form-group input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+            border-color: #FF69B4;
+            box-shadow: 0 0 0 3px rgba(255,105,180,0.2);
         }
         .auth-modal .btn-primary { width: 100%; margin-top: 10px; }
         .auth-modal p { text-align: center; margin-top: 15px; font-size: 13px; }
-        .auth-modal a { color: var(--primary-dark); text-decoration: none; font-weight: 600; }
+        .auth-modal a { color: #DB2777; text-decoration: none; font-weight: 600; }
         .auth-modal a:hover { text-decoration: underline; }
 
         /* Page Header */
@@ -1972,7 +1971,7 @@ HTML_INDEX = '''
             text-align: center;
             border-bottom: 1px solid var(--gray-light);
         }
-        .page-header h1 { font-size: 36px; margin-bottom: 8px; color: var(--primary-dark); }
+        .page-header h1 { font-size: 36px; margin-bottom: 8px; color: #DB2777; }
         .page-header p { color: var(--gray); }
         .container { max-width: 1400px; margin: 0 auto; padding: 0 30px; }
 
@@ -2052,36 +2051,29 @@ HTML_INDEX = '''
             .products-header p { font-size: 14px; padding: 0 15px; }
             .product-image { aspect-ratio: 4 / 3; }
             
-            /* CORRECTION IMPORTANTE POUR MOBILE */
-            /* Désactiver l'overlay sur mobile car il bloque les clics */
             .product-overlay {
                 display: none !important;
             }
             
-            /* Afficher le bouton d'ajout au panier */
             .add-to-cart-btn { 
                 display: flex !important;
                 margin-top: 15px;
             }
             
-            /* Rendre toute la carte cliquable pour voir le produit */
             .product-card {
                 cursor: pointer;
             }
             
-            /* Le lien du titre doit être bien visible */
             .product-title a {
                 display: inline-block;
                 padding: 5px 0;
             }
             
-            /* Ajuster la taille des boutons pour le toucher */
             .add-to-cart-btn, .btn-view, .btn-add-cart, .overlay-btn {
                 min-height: 48px;
                 font-size: 14px;
             }
             
-            /* Espacement des éléments */
             .product-info {
                 padding: 15px;
             }
