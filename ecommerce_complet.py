@@ -12,11 +12,6 @@ import os
 import uuid
 from datetime import datetime
 from functools import wraps
-import psycopg2
-from urllib.parse import urlparse
-from dotenv import load_dotenv
-
-load_dotenv()
 
 try:
     from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for, send_from_directory
@@ -65,25 +60,10 @@ def dict_factory(cursor, row):
     return d
 
 def get_db():
-    """Retourne une connexion avec row_factory configurée"""
-    database_url = os.environ.get('DATABASE_URL')
-    
-    if database_url and database_url.startswith('postgres'):
-        # PostgreSQL
-        conn = psycopg2.connect(database_url)
-        # Pour PostgreSQL, on utilise RealDictCursor
-        def dict_factory_postgres(cursor, row):
-            d = {}
-            for idx, col in enumerate(cursor.description):
-                d[col[0]] = row[idx]
-            return d
-        conn.row_factory = dict_factory_postgres
-        return conn
-    else:
-        # SQLite
-        conn = sqlite3.connect(DATABASE)
-        conn.row_factory = dict_factory
-        return conn
+    """Retourne une connexion SQLite"""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = dict_factory
+    return conn
 
 # ==================== FONCTIONS UTILITAIRES ====================
 
