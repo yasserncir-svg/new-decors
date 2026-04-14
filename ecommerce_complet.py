@@ -14164,14 +14164,7 @@ def admin_stock_out_print():
 if __name__ == '__main__':
     init_db()
     migrate_orders()
-          
-    print("""
-    ╔══════════════════════════════════════════════╗
-    ║     NEW DECORS - Site E-commerce Complet     ║
-    ╠══════════════════════════════════════════════╣
-    ║  🌐 Site: http://localhost:5000             ║
-    ║  🔐 Admin: http://localhost:5000/login      ║
-    ║  👤 Identifiant: admin / admin123           ║
-    ╚══════════════════════════════════════════════╝
-    """)
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    
+    # Pour Render, on utilise le port de l'environnement
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
