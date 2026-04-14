@@ -34,6 +34,7 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 for folder in ['static/uploads', 'static/uploads/medium', 'static/uploads/slider']:
     os.makedirs(folder, exist_ok=True)
 
+import os
 DATABASE = 'new_decors.db'
 
 # ==================== FONCTION DE CONVERSION ====================
@@ -14159,12 +14160,35 @@ def admin_stock_out_print():
                                   total_profit=total_profit,
                                   now=now)
 
-# ==================== LANCEMENT ====================
+def init_db_if_needed():
+    """Initialise la base de données si elle n'existe pas"""
+    if not os.path.exists(DATABASE):
+        print("📦 Base de données non trouvée, création...")
+        init_db()
+        print("✅ Base de données créée avec succès")
+    else:
+        print("✅ Base de données déjà existante")
+
+# Pour Render (Gunicorn) - s'exécute au démarrage
+if os.environ.get('RENDER'):
+    print("🚀 Démarrage sur Render...")
+    init_db_if_needed()
+    migrate_orders()
+    print("✅ Base de données prête")
 
 if __name__ == '__main__':
-    init_db()
+    init_db_if_needed()
     migrate_orders()
+          
+    print("""
+    ╔══════════════════════════════════════════════╗
+    ║     NEW DECORS - Site E-commerce Complet     ║
+    ╠══════════════════════════════════════════════╣
+    ║  🌐 Site: http://localhost:5000             ║
+    ║  🔐 Admin: http://localhost:5000/login      ║
+    ║  👤 Identifiant: admin / admin123           ║
+    ╚══════════════════════════════════════════════╝
+    """)
     
-    # Pour Render, on utilise le port de l'environnement
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
