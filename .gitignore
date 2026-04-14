@@ -1,25 +1,34 @@
-# Python
+# Base de donnÃ©es - NE PAS SUPPRIMER
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Dossiers d'upload (images)
+static/uploads/medium/*
+static/uploads/slider/*
+!static/uploads/medium/.gitkeep
+!static/uploads/slider/.gitkeep
+
+# Backups
+backups/
+*.bak
+*.backup
+
+# Fichiers Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+
+# Environnement virtuel
 venv/
+env/
 ENV/
-env.bak/
-venv.bak/
-
-# Base de données
-*.db
-*.sqlite
-*.sqlite3
-
-# Fichiers uploadés
-static/uploads/medium/*
-static/uploads/slider/*
-!static/uploads/medium/.gitkeep
-!static/uploads/slider/.gitkeep
+.venv/
 
 # IDE
 .vscode/
@@ -27,16 +36,16 @@ static/uploads/slider/*
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Logs
 *.log
 logs/
 
-# Backup
-*.json
-backup_*.json
-
 # Fichiers temporaires
 *.tmp
 *.temp
+*.pid
+
+# Variables d'environnement
+.env
+.env.local
