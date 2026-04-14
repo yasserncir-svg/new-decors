@@ -9749,7 +9749,7 @@ HTML_COMPTE = '''
                 <div id="tabInfo" class="account-card">
                     <div class="card-title">
                         <span><i class="fas fa-user"></i> Mes informations personnelles</span>
-                        <button class="btn btn-outline" onclick="editInfo()" style="padding: 6px 18px; font-size: 13px;"><i class="fas fa-edit"></i> Modifier</button>
+                        
                     </div>
                     <div class="info-grid">
                         <div class="info-item"><div class="info-label">Nom complet</div><div class="info-value" id="infoName">{{ client.fullname }}</div></div>
