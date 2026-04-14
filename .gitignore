@@ -47,5 +47,5 @@ logs/
 *.pid
 
 # Variables d'environnement
-
+.env
 .env.local
