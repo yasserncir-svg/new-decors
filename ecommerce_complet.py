@@ -9585,6 +9585,7 @@ HTML_COMPTE = '''
             color: white; 
             padding: 60px 0 20px; 
             margin-top: 60px;
+            position: relative;
         }
         .footer::before {
             content: '';
@@ -9602,7 +9603,6 @@ HTML_COMPTE = '''
             max-width: 1400px; 
             margin: 0 auto 40px; 
             padding: 0 30px;
-            position: relative;
         }
         .footer-col h4 { 
             margin-bottom: 20px; 
