@@ -14499,7 +14499,50 @@ def admin_stock_out_print():
                                   total_revenue=total_revenue,
                                   total_profit=total_profit,
                                   now=now)
-
+@app.route('/admin/migrate-to-supabase')
+@login_required
+def migrate_to_supabase():
+    if session.get('role') != 'admin':
+        return "Non autorisé", 403
+    
+    # Lire la base SQLite
+    sqlite_conn = sqlite3.connect('new_decors.db')
+    sqlite_conn.row_factory = sqlite3.Row
+    sqlite_cursor = sqlite_conn.cursor()
+    
+    # Connexion Supabase
+    supabase_conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
+    supabase_cursor = supabase_conn.cursor()
+    
+    tables = ['users', 'products', 'categories', 'subcategories', 'orders']
+    results = {}
+    
+    for table in tables:
+        try:
+            sqlite_cursor.execute(f"SELECT * FROM {table}")
+            rows = sqlite_cursor.fetchall()
+            
+            for row in rows:
+                columns = list(row.keys())
+                values = [row[col] for col in columns]
+                placeholders = ','.join(['%s'] * len(columns))
+                columns_str = ','.join(columns)
+                
+                supabase_cursor.execute(f"""
+                    INSERT INTO {table} ({columns_str}) 
+                    VALUES ({placeholders})
+                    ON CONFLICT (id) DO NOTHING
+                """, values)
+            
+            supabase_conn.commit()
+            results[table] = f"{len(rows)} lignes migrées"
+        except Exception as e:
+            results[table] = f"Erreur: {str(e)[:50]}"
+    
+    sqlite_conn.close()
+    supabase_conn.close()
+    
+    return jsonify(results)
 def init_db_if_needed():
     """Initialise la base de données si elle n'existe pas"""
     if not os.path.exists(DATABASE):
