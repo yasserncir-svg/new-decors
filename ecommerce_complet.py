@@ -118,15 +118,7 @@ def migrate_orders():
         pass
     conn.close()
 
-def init_db_if_needed():
-    """Initialise la base de données si elle n'existe pas"""
-    if not os.path.exists(DATABASE):
-        print("📦 Base de données non trouvée, création...")
-        init_db()
-        print("✅ Base de données créée avec succès")
-    else:
-        print(f"✅ Base de données déjà existante: {DATABASE}")
-        migrate_orders()
+
 # ==================== BASE DE DONNÉES ====================
 
 def init_db():
