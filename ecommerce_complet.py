@@ -26,7 +26,20 @@ except ImportError:
     import subprocess
     subprocess.check_call(['pip', 'install', 'Pillow'])
     from PIL import Image
+# ==================== AJOUTER LE CODE SUPABASE ICI ====================
+from supabase import create_client
 
+# Configuration Supabase (à partir des variables d'environnement)
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
+USE_SUPABASE = SUPABASE_URL and SUPABASE_KEY
+
+if USE_SUPABASE:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✅ Supabase connecté")
+else:
+    supabase = None
+    print("⚠️ Supabase non configuré, utilisation de SQLite")
 # ==================== CONFIGURATION BASE DE DONNÉES ====================
 if os.environ.get('RENDER'):
     # Sur Render: utiliser le répertoire local de l'application
