@@ -35,19 +35,21 @@ for folder in ['static/uploads', 'static/uploads/medium', 'static/uploads/slider
     os.makedirs(folder, exist_ok=True)
 
 import os
-DATABASE = 'new_decors.db'
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-# Configuration base de données pour Render
-def get_db_connection():
-    """Retourne une connexion à la base de données (SQLite ou PostgreSQL)"""
+def get_db():
+    """Retourne une connexion à la base de données"""
     database_url = os.environ.get('DATABASE_URL')
     
+    # Si on a une URL PostgreSQL (Supabase)
     if database_url and database_url.startswith('postgres'):
-        # PostgreSQL pour Render
-        return psycopg2.connect(database_url)
+        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        return conn
     else:
         # SQLite pour le développement local
-        conn = sqlite3.connect(DATABASE)
+        conn = sqlite3.connect('new_decors.db')
+        conn.row_factory = dict_factory
         return conn
 
 # ==================== FONCTION DE CONVERSION ====================
