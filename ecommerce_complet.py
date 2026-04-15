@@ -59,11 +59,24 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
+import os
+import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
 def get_db():
-    """Retourne une connexion SQLite"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = dict_factory
-    return conn
+    """Retourne une connexion à la base de données"""
+    database_url = os.environ.get('DATABASE_URL')
+    
+    # Si on utilise PostgreSQL (Render ou Supabase)
+    if database_url and database_url.startswith('postgres'):
+        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        return conn
+    else:
+        # SQLite pour le développement local
+        conn = sqlite3.connect('new_decors.db')
+        conn.row_factory = dict_factory
+        return conn
 
 # ==================== FONCTIONS UTILITAIRES ====================
 
