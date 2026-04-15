@@ -87,15 +87,31 @@ def get_db():
         conn.row_factory = dict_factory
         return conn
 def init_postgres_tables():
-    """Crée les tables dans PostgreSQL (version adaptée)"""
+    """Crée les tables dans PostgreSQL"""
     import psycopg2
     import psycopg2.extras
+    import time
     
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if not DATABASE_URL:
+        print("⚠️ Pas de DATABASE_URL, skip PostgreSQL")
         return
     
-    conn = psycopg2.connect(DATABASE_URL)
+    # Attendre que la DB soit disponible (max 30 secondes)
+    for i in range(6):
+        try:
+            conn = psycopg2.connect(DATABASE_URL, connect_timeout=10)
+            print("✅ Connexion PostgreSQL établie")
+            break
+        except Exception as e:
+            print(f"Tentative {i+1}/6: Connexion échouée, attente 5s... ({e})")
+            time.sleep(5)
+            conn = None
+    
+    if not conn:
+        print("❌ Impossible de se connecter à PostgreSQL")
+        return
+    
     cursor = conn.cursor()
     
     # Utilisateurs
