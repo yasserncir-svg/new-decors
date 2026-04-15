@@ -28,10 +28,13 @@ except ImportError:
     from PIL import Image
 
 # ==================== CONFIGURATION BASE DE DONNÉES ====================
-# Définir DATABASE avant toute utilisation
 if os.environ.get('RENDER'):
-    DATABASE = '/data/new_decors.db'
-    os.makedirs('/data', exist_ok=True)
+    # Sur Render: utiliser le répertoire local de l'application
+    # Créer un dossier 'data' dans le répertoire de l'application
+    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    os.makedirs(DATA_DIR, exist_ok=True)
+    DATABASE = os.path.join(DATA_DIR, 'new_decors.db')
+    print(f"✅ Mode Render - Dossier data: {DATA_DIR}")
     print(f"✅ Mode Render - Base de données: {DATABASE}")
 else:
     DATABASE = 'new_decors.db'
@@ -41,6 +44,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'new_decors_secret_key_2024')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
+# Créer les dossiers d'upload (ceux-ci sont déjà des chemins relatifs, donc OK)
 for folder in ['static/uploads', 'static/uploads/medium', 'static/uploads/slider']:
     os.makedirs(folder, exist_ok=True)
 
@@ -14590,6 +14594,10 @@ if os.environ.get('RENDER'):
 if __name__ == '__main__':
     init_db_if_needed()
     migrate_orders()
+    
+    # Afficher le chemin de la base de données au démarrage
+    print(f"📁 Base de données utilisée: {DATABASE}")
+    print(f"📁 Dossier existe: {os.path.exists(os.path.dirname(DATABASE) if os.path.dirname(DATABASE) else '.')}")
           
     print("""
     ╔══════════════════════════════════════════════╗
