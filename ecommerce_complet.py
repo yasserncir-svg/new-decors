@@ -70,16 +70,20 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
     
-def fix_query(cursor, query, params=None):
-    """Convertit automatiquement la requête pour PostgreSQL"""
+def execute_query(cursor, query, params=None):
+    """Exécute une requête compatible PostgreSQL et SQLite"""
     DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL and params:
+    if params is None:
+        params = []
+    
+    if DATABASE_URL:
+        # PostgreSQL : remplacer ? par %s
         query = query.replace('?', '%s')
-        return execute_query(cursor,query, params)
-    elif params:
-        return execute_query(cursor,query, params)
+    
+    if params:
+        return cursor.execute(query, params)
     else:
-        return execute_query(cursor,query)
+        return cursor.execute(query)
         
 # ==================== FONCTION GET_DB (UNE SEULE VERSION) ====================
 
