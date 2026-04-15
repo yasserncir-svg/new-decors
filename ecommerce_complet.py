@@ -27,30 +27,22 @@ except ImportError:
     subprocess.check_call(['pip', 'install', 'Pillow'])
     from PIL import Image
 
+# ==================== CONFIGURATION BASE DE DONNÉES ====================
+# Définir DATABASE avant toute utilisation
+if os.environ.get('RENDER'):
+    DATABASE = '/data/new_decors.db'
+    os.makedirs('/data', exist_ok=True)
+    print(f"✅ Mode Render - Base de données: {DATABASE}")
+else:
+    DATABASE = 'new_decors.db'
+    print(f"✅ Mode local - Base de données: {DATABASE}")
+
 app = Flask(__name__)
-app.secret_key = 'new_decors_secret_key_2024'
+app.secret_key = os.environ.get('SECRET_KEY', 'new_decors_secret_key_2024')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 for folder in ['static/uploads', 'static/uploads/medium', 'static/uploads/slider']:
     os.makedirs(folder, exist_ok=True)
-
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
-def get_db():
-    """Retourne une connexion à la base de données"""
-    database_url = os.environ.get('DATABASE_URL')
-    
-    # Si on a une URL PostgreSQL (Supabase)
-    if database_url and database_url.startswith('postgres'):
-        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
-        return conn
-    else:
-        # SQLite pour le développement local
-        conn = sqlite3.connect('new_decors.db')
-        conn.row_factory = dict_factory
-        return conn
 
 # ==================== FONCTION DE CONVERSION ====================
 
@@ -60,6 +52,8 @@ def dict_factory(cursor, row):
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
+
+# ==================== FONCTION GET_DB (UNE SEULE VERSION) ====================
 
 def get_db():
     """Retourne une connexion SQLite"""
@@ -95,6 +89,40 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+# ==================== MIGRATIONS ====================
+
+def migrate_orders():
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE orders ADD COLUMN stock_deducted INTEGER DEFAULT 0")
+        conn.commit()
+        print("✅ Migration: stock_deducted ajoutée")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_id INTEGER")
+        conn.commit()
+        print("✅ Migration: seller_id ajoutée")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_name TEXT")
+        conn.commit()
+        print("✅ Migration: seller_name ajoutée")
+    except:
+        pass
+    conn.close()
+
+def init_db_if_needed():
+    """Initialise la base de données si elle n'existe pas"""
+    if not os.path.exists(DATABASE):
+        print("📦 Base de données non trouvée, création...")
+        init_db()
+        print("✅ Base de données créée avec succès")
+    else:
+        print(f"✅ Base de données déjà existante: {DATABASE}")
+        migrate_orders()
 # ==================== BASE DE DONNÉES ====================
 
 def init_db():
