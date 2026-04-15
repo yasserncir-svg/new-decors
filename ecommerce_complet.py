@@ -69,6 +69,7 @@ def dict_factory(cursor, row):
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
+    
 def fix_query(cursor, query, params=None):
     """Convertit automatiquement la requête pour PostgreSQL"""
     DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -79,6 +80,7 @@ def fix_query(cursor, query, params=None):
         return execute_query(cursor,query, params)
     else:
         return execute_query(cursor,query)
+        
 # ==================== FONCTION GET_DB (UNE SEULE VERSION) ====================
 
 def get_db():
