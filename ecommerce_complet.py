@@ -383,7 +383,87 @@ def init_postgres_tables():
             value TEXT
         )
     ''')
+        # Admin par défaut
+    admin_pass = hashlib.sha256('admin123'.encode()).hexdigest()
+    execute_query(cursor, """
+        INSERT INTO users (username, password, fullname, role, active) 
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (username) DO NOTHING
+    """, ('admin', admin_pass, 'Administrateur', 'admin', 1))
     
+    # Catégories
+    categories = [
+        ('Revetements Muraux', 'revetements-muraux', 'Papiers peints, panneaux PVC', '📄', 1),
+        ('Decoration', 'decoration', 'Miroirs, horloges, cadres', '🖼️', 2),
+        ('Luminaires', 'luminaires', 'Lampes, suspensions', '💡', 3),
+        ('Textiles', 'textiles', 'Coussins, rideaux', '🛋️', 4),
+    ]
+    for cat in categories:
+        execute_query(cursor, """
+            INSERT INTO categories (name, slug, description, icon, order_position) 
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (slug) DO NOTHING
+        """, cat)
+    
+    # Sous-catégories
+    subcategories = [
+        (1, 'Papiers Peints', 'papiers-peints', 'Collection exclusive'),
+        (1, 'Panneaux PVC', 'panneaux-pvc', 'Panneaux PVC - Shibord'),
+        (2, 'Miroirs', 'miroirs', 'Miroirs decoratifs'),
+        (2, 'Horloges', 'horloges', 'Horloges murales'),
+        (3, 'Suspensions', 'suspensions', 'Suspensions modernes'),
+        (4, 'Coussins', 'coussins', 'Coussins decoratifs'),
+    ]
+    for sub in subcategories:
+        execute_query(cursor, """
+            INSERT INTO subcategories (category_id, name, slug, description) 
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (slug) DO NOTHING
+        """, sub)
+    
+    # Produits
+    products = [
+        ('PVC001', 'Panneau Shibord Blanc', 'panneau-shibord-blanc', 'Panneau PVC blanc mat', '', 2, 45, 89.90, None, 50, 5, '', 1),
+        ('PVC002', 'Panneau Shibord Bois', 'panneau-shibord-bois', 'Panneau PVC effet bois', '', 2, 48, 95.90, 85.90, 30, 5, '', 1),
+        ('WP001', 'Papier Peint Tropical', 'papier-peint-tropical', 'Papier peint tropical', '', 1, 35, 79.90, 69.90, 40, 5, '', 1),
+        ('MIR001', 'Miroir Rond Doré', 'miroir-rond-dore', 'Miroir rond finition dorée', '', 3, 120, 299.90, 249.90, 15, 3, '', 1),
+        ('HOR001', 'Horloge Murale', 'horloge-murale', 'Horloge design moderne', '', 4, 45, 89.90, None, 20, 5, '', 0),
+        ('LAM001', 'Suspension Industrielle', 'suspension-industrielle', 'Suspension style industriel', '', 5, 65, 149.90, 129.90, 10, 3, '', 1),
+        ('COU001', 'Coussin Velours', 'coussin-velours', 'Coussin velours bleu', '', 6, 25, 49.90, 39.90, 100, 10, '', 1),
+    ]
+    for p in products:
+        execute_query(cursor, """
+            INSERT INTO products (reference, name, slug, description, short_description, 
+                                  subcategory_id, prix_achat, prix_vente, prix_promo, 
+                                  stock, stock_min, image, featured) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (reference) DO NOTHING
+        """, p)
+    
+    # Paramètres
+    settings = [
+        ('site_name', 'New Decors'),
+        ('site_description', 'Decoration d interieur de qualite'),
+        ('contact_phone', '+216 70 000 000'),
+        ('contact_email', 'contact@newdecors.tn'),
+        ('contact_address', 'Tunis, Tunisie'),
+        ('about_text', 'New Decors est votre specialiste de la decoration d interieur en Tunisie.'),
+        ('hours_monday_friday', '9h - 18h'),
+        ('hours_saturday', '10h - 16h'),
+        ('hours_sunday', 'Fermé'),
+    ]
+    for key, value in settings:
+        execute_query(cursor, """
+            INSERT INTO settings (key, value) VALUES (%s, %s)
+            ON CONFLICT (key) DO NOTHING
+        """, (key, value))
+    
+    # Code promo
+    execute_query(cursor, """
+        INSERT INTO promotions (code, description, discount_type, discount_value, min_purchase, active) 
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (code) DO NOTHING
+    """, ('BIENVENUE10', '10% sur votre premiere commande', 'percentage', 10, 50, 1))
     conn.commit()
     conn.close()
     print("✅ Tables PostgreSQL créées")
