@@ -1,11 +1,10 @@
 # Base de données - NE PAS SUPPRIMER
-*.db
-*.sqlite
-*.sqlite3
+# *.db      ← COMMENTÉ TEMPORAIREMENT
+# *.sqlite  ← COMMENTÉ TEMPORAIREMENT
+# *.sqlite3 ← COMMENTÉ TEMPORAIREMENT
 *.db-journal
 *.db-wal
 *.db-shm
-
 # Dossiers d'upload (images)
 static/uploads/medium/*
 static/uploads/slider/*
