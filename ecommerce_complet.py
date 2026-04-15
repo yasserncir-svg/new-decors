@@ -69,7 +69,16 @@ def dict_factory(cursor, row):
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
-
+def fix_query(cursor, query, params=None):
+    """Convertit automatiquement la requête pour PostgreSQL"""
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL and params:
+        query = query.replace('?', '%s')
+        return execute_query(cursor,query, params)
+    elif params:
+        return execute_query(cursor,query, params)
+    else:
+        return execute_query(cursor,query)
 # ==================== FONCTION GET_DB (UNE SEULE VERSION) ====================
 
 def get_db():
@@ -115,7 +124,7 @@ def init_postgres_tables():
     cursor = conn.cursor()
     
     # Utilisateurs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -132,7 +141,7 @@ def init_postgres_tables():
     ''')
     
     # user_logs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS user_logs (
             id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
@@ -143,7 +152,7 @@ def init_postgres_tables():
     ''')
     
     # order_logs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS order_logs (
             id SERIAL PRIMARY KEY,
             order_id INTEGER NOT NULL,
@@ -156,7 +165,7 @@ def init_postgres_tables():
     ''')
     
     # Catégories
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS categories (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -169,7 +178,7 @@ def init_postgres_tables():
     ''')
     
     # Sous-catégories
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS subcategories (
             id SERIAL PRIMARY KEY,
             category_id INTEGER NOT NULL,
@@ -180,7 +189,7 @@ def init_postgres_tables():
     ''')
     
     # Produits
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS products (
             id SERIAL PRIMARY KEY,
             reference TEXT UNIQUE NOT NULL,
@@ -202,7 +211,7 @@ def init_postgres_tables():
     ''')
     
     # product_images
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS product_images (
             id SERIAL PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -212,7 +221,7 @@ def init_postgres_tables():
     ''')
     
     # Commandes
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
             order_number TEXT UNIQUE NOT NULL,
@@ -229,7 +238,7 @@ def init_postgres_tables():
     ''')
     
     # Fournisseurs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS suppliers (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -243,7 +252,7 @@ def init_postgres_tables():
     ''')
     
     # stock_in
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS stock_in (
             id SERIAL PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -257,7 +266,7 @@ def init_postgres_tables():
     ''')
     
     # stock_out
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS stock_out (
             id SERIAL PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -279,7 +288,7 @@ def init_postgres_tables():
     ''')
     
     # Clients
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS clients (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -294,7 +303,7 @@ def init_postgres_tables():
     ''')
     
     # Sliders
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS sliders (
             id SERIAL PRIMARY KEY,
             title TEXT,
@@ -308,7 +317,7 @@ def init_postgres_tables():
     ''')
     
     # Newsletter
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS newsletter (
             id SERIAL PRIMARY KEY,
             email TEXT UNIQUE NOT NULL,
@@ -317,7 +326,7 @@ def init_postgres_tables():
     ''')
     
     # Promotions
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS promotions (
             id SERIAL PRIMARY KEY,
             code TEXT UNIQUE NOT NULL,
@@ -334,7 +343,7 @@ def init_postgres_tables():
     ''')
     
     # Reviews
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS reviews (
             id SERIAL PRIMARY KEY,
             product_id INTEGER NOT NULL,
@@ -348,7 +357,7 @@ def init_postgres_tables():
     ''')
     
     # Team members
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS team_members (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
@@ -362,7 +371,7 @@ def init_postgres_tables():
     ''')
     
     # Settings
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
@@ -407,19 +416,19 @@ def migrate_orders():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE orders ADD COLUMN stock_deducted INTEGER DEFAULT 0")
+        execute_query(cursor,"ALTER TABLE orders ADD COLUMN stock_deducted INTEGER DEFAULT 0")
         conn.commit()
         print("✅ Migration: stock_deducted ajoutée")
     except:
         pass
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_id INTEGER")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN seller_id INTEGER")
         conn.commit()
         print("✅ Migration: seller_id ajoutée")
     except:
         pass
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_name TEXT")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN seller_name TEXT")
         conn.commit()
         print("✅ Migration: seller_name ajoutée")
     except:
@@ -434,7 +443,7 @@ def init_db():
     cursor = conn.cursor()
     
     # Utilisateurs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -451,7 +460,7 @@ def init_db():
     ''')
 
     # Table user_logs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS user_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -463,7 +472,7 @@ def init_db():
     ''')
     
     # Table order_logs (NOUVEAU - AJOUTER ICI)
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS order_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_id INTEGER NOT NULL,
@@ -479,7 +488,7 @@ def init_db():
 
 
     # Catégories
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -492,7 +501,7 @@ def init_db():
     ''')
     
     # Sous-catégories
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS subcategories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category_id INTEGER NOT NULL,
@@ -504,7 +513,7 @@ def init_db():
     ''')
     
     # Produits
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             reference TEXT UNIQUE NOT NULL,
@@ -526,7 +535,7 @@ def init_db():
         )
     ''')
     # Images des produits (galerie)
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS product_images (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -536,7 +545,7 @@ def init_db():
         )
     ''')
     # Commandes
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_number TEXT UNIQUE NOT NULL,
@@ -552,7 +561,7 @@ def init_db():
     ''')
     
     # Fournisseurs
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS suppliers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -566,7 +575,7 @@ def init_db():
     ''')
     
     # Entrées stock (achats)
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS stock_in (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -582,7 +591,7 @@ def init_db():
     ''')
     
     # Sorties stock (ventes)
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS stock_out (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -602,25 +611,25 @@ def init_db():
         )
     ''')
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN notes TEXT")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN notes TEXT")
     except:
         pass
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN order_number TEXT")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN order_number TEXT")
     except:
         pass
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_id     INTEGER")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN seller_id     INTEGER")
     except:
         pass
 
     try:
-        cursor.execute("ALTER TABLE stock_out ADD COLUMN seller_name TEXT")
+        execute_query(cursor,"ALTER TABLE stock_out ADD COLUMN seller_name TEXT")
     except:
         pass
     
     # Clients
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -635,7 +644,7 @@ def init_db():
     ''')
     
     # Slider
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS sliders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
@@ -649,7 +658,7 @@ def init_db():
     ''')
     
     # Newsletter
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS newsletter (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
@@ -658,7 +667,7 @@ def init_db():
     ''')
     
     # Promotions
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS promotions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
@@ -675,7 +684,7 @@ def init_db():
     ''')
     
     # Avis
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS reviews (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             product_id INTEGER NOT NULL,
@@ -689,7 +698,7 @@ def init_db():
         )
     ''')
    # Équipe
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS team_members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -703,7 +712,7 @@ def init_db():
     ''') 
 
     # Paramètres
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
@@ -713,7 +722,7 @@ def init_db():
     # Admin par défaut
     admin_pass = hashlib.sha256('admin123'.encode()).hexdigest()
     try:
-        cursor.execute("INSERT INTO users (username, password, fullname, role) VALUES (?, ?, ?, ?)", 
+        execute_query(cursor,"INSERT INTO users (username, password, fullname, role) VALUES (?, ?, ?, ?)", 
                       ('admin', admin_pass, 'Administrateur', 'admin'))
     except:
         pass
@@ -727,7 +736,7 @@ def init_db():
     ]
     for cat in categories:
         try:
-            cursor.execute("INSERT INTO categories (name, slug, description, icon, order_position) VALUES (?, ?, ?, ?, ?)", cat)
+            execute_query(cursor,"INSERT INTO categories (name, slug, description, icon, order_position) VALUES (?, ?, ?, ?, ?)", cat)
         except:
             pass
     
@@ -742,7 +751,7 @@ def init_db():
     ]
     for sub in subcategories:
         try:
-            cursor.execute("INSERT INTO subcategories (category_id, name, slug, description) VALUES (?, ?, ?, ?)", sub)
+            execute_query(cursor,"INSERT INTO subcategories (category_id, name, slug, description) VALUES (?, ?, ?, ?)", sub)
         except:
             pass
     
@@ -758,7 +767,7 @@ def init_db():
     ]
     for p in products:
         try:
-            cursor.execute("INSERT INTO products (reference, name, slug, description, short_description, subcategory_id, prix_achat, prix_vente, prix_promo, stock, stock_min, image, featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", p)
+            execute_query(cursor,"INSERT INTO products (reference, name, slug, description, short_description, subcategory_id, prix_achat, prix_vente, prix_promo, stock, stock_min, image, featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", p)
         except:
             pass
     
@@ -769,7 +778,7 @@ def init_db():
     ]
     for s in suppliers:
         try:
-            cursor.execute("INSERT INTO suppliers (name, company, phone, email, address, contact_person) VALUES (?, ?, ?, ?, ?, ?)", s)
+            execute_query(cursor,"INSERT INTO suppliers (name, company, phone, email, address, contact_person) VALUES (?, ?, ?, ?, ?, ?)", s)
         except:
             pass
     
@@ -787,13 +796,13 @@ def init_db():
     ]
     for key, value in settings:
         try:
-            cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", (key, value))
+            execute_query(cursor,"INSERT INTO settings (key, value) VALUES (?, ?)", (key, value))
         except:
             pass
     
     # Code promo
     try:
-        cursor.execute("INSERT INTO promotions (code, description, discount_type, discount_value, min_purchase, active) VALUES (?, ?, ?, ?, ?, ?)",
+        execute_query(cursor,"INSERT INTO promotions (code, description, discount_type, discount_value, min_purchase, active) VALUES (?, ?, ?, ?, ?, ?)",
                       ('BIENVENUE10', '10% sur votre premiere commande', 'percentage', 10, 50, 1))
     except:
         pass
@@ -806,7 +815,7 @@ def migrate_orders():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE orders ADD COLUMN stock_deducted INTEGER DEFAULT 0")
+        execute_query(cursor,"ALTER TABLE orders ADD COLUMN stock_deducted INTEGER DEFAULT 0")
         conn.commit()
         print("✅ Migration ajoutée")
     except:
@@ -12243,24 +12252,24 @@ def index():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     # Récupérer les sous-catégories pour chaque catégorie
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
-    cursor.execute("SELECT * FROM sliders WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM sliders WHERE active=1 ORDER BY order_position")
     sliders = cursor.fetchall()
     
-    cursor.execute("SELECT * FROM products WHERE active=1 AND prix_promo IS NOT NULL AND prix_promo > 0 ORDER BY created_at DESC LIMIT 6")
+    execute_query(cursor,"SELECT * FROM products WHERE active=1 AND prix_promo IS NOT NULL AND prix_promo > 0 ORDER BY created_at DESC LIMIT 6")
     promo_products = cursor.fetchall()
     
-    cursor.execute("SELECT * FROM products WHERE active=1 ORDER BY created_at DESC LIMIT 8")
+    execute_query(cursor,"SELECT * FROM products WHERE active=1 ORDER BY created_at DESC LIMIT 8")
     new_products = cursor.fetchall()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings_rows = cursor.fetchall()
     settings = {row['key']: row['value'] for row in settings_rows}
     
@@ -12296,7 +12305,7 @@ def login():
         
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username=? AND password=? AND active=1", (username, hashed_password))
+        execute_query(cursor,"SELECT * FROM users WHERE username=? AND password=? AND active=1", (username, hashed_password))
         user = cursor.fetchone()
         conn.close()
         
@@ -12304,7 +12313,7 @@ def login():
             # Enregistrer la connexion dans les logs
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute("""
+            execute_query(cursor,"""
                 INSERT INTO user_logs (user_id, action, ip_address)
                 VALUES (?, ?, ?)
             """, (user['id'], 'login', request.remote_addr))
@@ -12314,7 +12323,7 @@ def login():
             # Mettre à jour last_login
             conn = get_db()
             cursor = conn.cursor()
-            cursor.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user['id'],))
+            execute_query(cursor,"UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user['id'],))
             conn.commit()
             conn.close()
             
@@ -12355,7 +12364,7 @@ def uploaded_medium(filename):
 def admin_products():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products ORDER BY id DESC")
+    execute_query(cursor,"SELECT * FROM products ORDER BY id DESC")
     products = cursor.fetchall()
     conn.close()
     return jsonify({'products': products})
@@ -12366,7 +12375,7 @@ def admin_products_enhanced():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             p.*,
             sc.name as subcategory_name,
@@ -12391,10 +12400,10 @@ def admin_products_enhanced():
             product_dict['prix_promo'] = None
         products_list.append(product_dict)
     
-    cursor.execute("SELECT id, name FROM suppliers WHERE active=1 ORDER BY name")
+    execute_query(cursor,"SELECT id, name FROM suppliers WHERE active=1 ORDER BY name")
     suppliers = cursor.fetchall()
     
-    cursor.execute("SELECT id, name FROM subcategories ORDER BY name")
+    execute_query(cursor,"SELECT id, name FROM subcategories ORDER BY name")
     subcategories = cursor.fetchall()
     
     conn.close()
@@ -12412,7 +12421,7 @@ def admin_product_stock():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE products SET stock = ? WHERE id = ?", (new_stock, product_id))
+    execute_query(cursor,"UPDATE products SET stock = ? WHERE id = ?", (new_stock, product_id))
     conn.commit()
     conn.close()
     
@@ -12422,7 +12431,7 @@ def admin_product_stock():
 def admin_product_purchase_history(product_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT si.*, s.name as supplier_name 
         FROM stock_in si
         LEFT JOIN suppliers s ON si.supplier_id = s.id
@@ -12452,7 +12461,7 @@ def admin_product_save():
     if product_id:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT stock, prix_achat, prix_vente, prix_promo FROM products WHERE id=?", (product_id,))
+        execute_query(cursor,"SELECT stock, prix_achat, prix_vente, prix_promo FROM products WHERE id=?", (product_id,))
         existing = cursor.fetchone()
         conn.close()
         
@@ -12499,7 +12508,7 @@ def admin_product_save():
     
     if product_id:
         if image_name:
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE products 
                 SET reference=?, name=?, slug=?, description=?, short_description=?, 
                     subcategory_id=?, prix_achat=?, prix_vente=?, prix_promo=?, 
@@ -12508,7 +12517,7 @@ def admin_product_save():
             """, (reference, name, slug, description, short_description, subcategory_id, 
                   prix_achat, prix_vente, prix_promo, stock, stock_min, image_name, featured, product_id))
         else:
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE products 
                 SET reference=?, name=?, slug=?, description=?, short_description=?, 
                     subcategory_id=?, prix_achat=?, prix_vente=?, prix_promo=?, 
@@ -12517,7 +12526,7 @@ def admin_product_save():
             """, (reference, name, slug, description, short_description, subcategory_id, 
                   prix_achat, prix_vente, prix_promo, stock, stock_min, featured, product_id))
     else:
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO products (reference, name, slug, description, short_description, 
                                   subcategory_id, prix_achat, prix_vente, prix_promo, 
                                   stock, stock_min, image, featured) 
@@ -12533,7 +12542,7 @@ def admin_product_save():
 def admin_product_delete(product_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM products WHERE id=?", (product_id,))
+    execute_query(cursor,"DELETE FROM products WHERE id=?", (product_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12545,7 +12554,7 @@ def admin_product_active():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE products SET active = ? WHERE id = ?", (active, product_id))
+    execute_query(cursor,"UPDATE products SET active = ? WHERE id = ?", (active, product_id))
     conn.commit()
     conn.close()
     
@@ -12558,7 +12567,7 @@ def admin_product_active():
 def get_product_images(product_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM product_images WHERE product_id=? ORDER BY order_position", (product_id,))
+    execute_query(cursor,"SELECT * FROM product_images WHERE product_id=? ORDER BY order_position", (product_id,))
     images = cursor.fetchall()
     conn.close()
     return jsonify(images)
@@ -12588,7 +12597,7 @@ def add_product_image():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO product_images (product_id, image, order_position)
             VALUES (?, ?, ?)
         """, (product_id, image_name, 0))
@@ -12608,7 +12617,7 @@ def add_product_image():
 def delete_product_image(image_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT image FROM product_images WHERE id=?", (image_id,))
+    execute_query(cursor,"SELECT image FROM product_images WHERE id=?", (image_id,))
     image = cursor.fetchone()
     if image:
         # Supprimer le fichier
@@ -12616,7 +12625,7 @@ def delete_product_image(image_id):
             os.remove(os.path.join(app.config['UPLOAD_FOLDER'], 'medium', image['image']))
         except:
             pass
-    cursor.execute("DELETE FROM product_images WHERE id=?", (image_id,))
+    execute_query(cursor,"DELETE FROM product_images WHERE id=?", (image_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12637,7 +12646,7 @@ def admin_product_promo():
     cursor = conn.cursor()
     
     # Vérifier si le produit existe
-    cursor.execute("SELECT id, name, prix_vente FROM products WHERE id = ?", (product_id,))
+    execute_query(cursor,"SELECT id, name, prix_vente FROM products WHERE id = ?", (product_id,))
     product = cursor.fetchone()
     
     if not product:
@@ -12656,10 +12665,10 @@ def admin_product_promo():
         action_msg = f"promo_supprimée: {product['name']} - retour à {product['prix_vente']} DNT"
     
     # Mettre à jour
-    cursor.execute("UPDATE products SET prix_promo = ? WHERE id = ?", (prix_promo, product_id))
+    execute_query(cursor,"UPDATE products SET prix_promo = ? WHERE id = ?", (prix_promo, product_id))
     
     # ========== CORRECTION : Utiliser user_logs ==========
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO user_logs (user_id, action, ip_address)
         VALUES (?, ?, ?)
     """, (session.get('user_id'), action_msg, request.remote_addr))
@@ -12668,7 +12677,7 @@ def admin_product_promo():
     conn.commit()
     
     # Vérifier la mise à jour
-    cursor.execute("SELECT prix_promo FROM products WHERE id = ?", (product_id,))
+    execute_query(cursor,"SELECT prix_promo FROM products WHERE id = ?", (product_id,))
     updated = cursor.fetchone()
     print(f"Valeur en BDD après update: {updated['prix_promo']}")
     
@@ -12685,7 +12694,7 @@ def validate_promo():
     cursor = conn.cursor()
     
     # Récupérer le code promo
-    cursor.execute("SELECT * FROM promotions WHERE code = ? AND active = 1", (code,))
+    execute_query(cursor,"SELECT * FROM promotions WHERE code = ? AND active = 1", (code,))
     promo = cursor.fetchone()
     
     if not promo:
@@ -12729,9 +12738,9 @@ def validate_promo():
 def admin_categories():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM categories ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories ORDER BY order_position")
     categories = cursor.fetchall()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT s.*, c.name as category_name FROM subcategories s
         LEFT JOIN categories c ON s.category_id = c.id
         ORDER BY c.order_position, s.name
@@ -12752,9 +12761,9 @@ def admin_category_save():
     conn = get_db()
     cursor = conn.cursor()
     if cat_id:
-        cursor.execute("UPDATE categories SET name=?, slug=?, icon=?, order_position=? WHERE id=?", (name, slug, icon, order_position, cat_id))
+        execute_query(cursor,"UPDATE categories SET name=?, slug=?, icon=?, order_position=? WHERE id=?", (name, slug, icon, order_position, cat_id))
     else:
-        cursor.execute("INSERT INTO categories (name, slug, icon, order_position) VALUES (?,?,?,?)", (name, slug, icon, order_position))
+        execute_query(cursor,"INSERT INTO categories (name, slug, icon, order_position) VALUES (?,?,?,?)", (name, slug, icon, order_position))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12764,7 +12773,7 @@ def admin_category_save():
 def admin_category_delete(cat_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM categories WHERE id=?", (cat_id,))
+    execute_query(cursor,"DELETE FROM categories WHERE id=?", (cat_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12780,9 +12789,9 @@ def admin_subcategory_save():
     conn = get_db()
     cursor = conn.cursor()
     if sub_id:
-        cursor.execute("UPDATE subcategories SET category_id=?, name=?, slug=? WHERE id=?", (category_id, name, slug, sub_id))
+        execute_query(cursor,"UPDATE subcategories SET category_id=?, name=?, slug=? WHERE id=?", (category_id, name, slug, sub_id))
     else:
-        cursor.execute("INSERT INTO subcategories (category_id, name, slug) VALUES (?,?,?)", (category_id, name, slug))
+        execute_query(cursor,"INSERT INTO subcategories (category_id, name, slug) VALUES (?,?,?)", (category_id, name, slug))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12792,7 +12801,7 @@ def admin_subcategory_save():
 def admin_subcategory_delete(sub_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM subcategories WHERE id=?", (sub_id,))
+    execute_query(cursor,"DELETE FROM subcategories WHERE id=?", (sub_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -12801,22 +12810,22 @@ def admin_subcategory_delete(sub_id):
 def subcategory_page(slug):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, description FROM subcategories WHERE slug=?", (slug,))
+    execute_query(cursor,"SELECT id, name, description FROM subcategories WHERE slug=?", (slug,))
     sub = cursor.fetchone()
     if not sub:
         return "Sous-catégorie non trouvée", 404
     
-    cursor.execute("SELECT * FROM products WHERE subcategory_id=? AND active=1 ORDER BY created_at DESC", (sub['id'],))
+    execute_query(cursor,"SELECT * FROM products WHERE subcategory_id=? AND active=1 ORDER BY created_at DESC", (sub['id'],))
     products = cursor.fetchall()
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
     conn.close()
@@ -12837,9 +12846,9 @@ def admin_orders():
     conn = get_db()
     cursor = conn.cursor()
     if limit:
-        cursor.execute("SELECT * FROM orders ORDER BY date DESC LIMIT ?", (limit,))
+        execute_query(cursor,"SELECT * FROM orders ORDER BY date DESC LIMIT ?", (limit,))
     else:
-        cursor.execute("SELECT * FROM orders ORDER BY date DESC")
+        execute_query(cursor,"SELECT * FROM orders ORDER BY date DESC")
     orders = cursor.fetchall()
     conn.close()
     return jsonify(orders)
@@ -12849,7 +12858,7 @@ def admin_orders():
 def admin_order(order_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders WHERE id=?", (order_id,))
+    execute_query(cursor,"SELECT * FROM orders WHERE id=?", (order_id,))
     order = cursor.fetchone()
     conn.close()
     return jsonify(order)
@@ -12867,7 +12876,7 @@ def admin_order_status():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM orders WHERE id=?", (order_id,))
+    execute_query(cursor,"SELECT * FROM orders WHERE id=?", (order_id,))
     order = cursor.fetchone()
     
     if not order:
@@ -12903,14 +12912,14 @@ def admin_order_status():
     # ================================================================
     
     # ========== AJOUTER LE LOG DANS user_logs ==========
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO user_logs (user_id, action, ip_address)
         VALUES (?, ?, ?)
     """, (user_id, f"commande_status: {order['order_number']} - {old_status} → {new_status} par {username}", request.remote_addr))
     # ===================================================
     
     # Enregistrer dans les logs dédiés (order_logs)
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO order_logs (order_id, user_id, old_status, new_status, action_date, ip_address)
         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
     """, (order_id, user_id, old_status, new_status, request.remote_addr))
@@ -12927,7 +12936,7 @@ def admin_order_status():
         discount_factor = 1 - (discount / subtotal) if subtotal > 0 else 1
         
         for item in items:
-            cursor.execute("SELECT prix_achat FROM products WHERE id=?", (item['id'],))
+            execute_query(cursor,"SELECT prix_achat FROM products WHERE id=?", (item['id'],))
             product = cursor.fetchone()
             purchase_price = product['prix_achat'] if product else 0
             
@@ -12937,7 +12946,7 @@ def admin_order_status():
             profit = (discounted_price - purchase_price) * item['quantity']
             
             # Enregistrer dans stock_out avec le prix réduit
-            cursor.execute("""
+            execute_query(cursor,"""
                 INSERT INTO stock_out (product_id, client_name, client_phone, client_email, client_address, 
                                        quantity, sale_price, total, profit, notes, sale_type, order_number, seller_name)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'order', ?, ?)
@@ -12947,9 +12956,9 @@ def admin_order_status():
                   order['order_number'], 'Client en ligne'))
             
             # Déduire le stock
-            cursor.execute("UPDATE products SET stock = stock - ? WHERE id=?", (item['quantity'], item['id']))
+            execute_query(cursor,"UPDATE products SET stock = stock - ? WHERE id=?", (item['quantity'], item['id']))
         
-        cursor.execute("UPDATE orders SET stock_deducted = 1 WHERE id=?", (order_id,))
+        execute_query(cursor,"UPDATE orders SET stock_deducted = 1 WHERE id=?", (order_id,))
     
     # Cas 2: Commande annulée -> Supprimer de stock_out et remettre le stock
     elif new_status == 'cancelled' and stock_deducted:
@@ -12957,18 +12966,18 @@ def admin_order_status():
         
         for item in items:
             # Supprimer l'entrée de stock_out
-            cursor.execute("""
+            execute_query(cursor,"""
                 DELETE FROM stock_out 
                 WHERE notes LIKE ? AND product_id = ?
             """, (f"%{order['order_number']}%", item['id']))
             
             # Remettre le stock
-            cursor.execute("UPDATE products SET stock = stock + ? WHERE id=?", (item['quantity'], item['id']))
+            execute_query(cursor,"UPDATE products SET stock = stock + ? WHERE id=?", (item['quantity'], item['id']))
         
-        cursor.execute("UPDATE orders SET stock_deducted = 0 WHERE id=?", (order_id,))
+        execute_query(cursor,"UPDATE orders SET stock_deducted = 0 WHERE id=?", (order_id,))
     
     # Mettre à jour le statut
-    cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
+    execute_query(cursor,"UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
     
     conn.commit()
     conn.close()
@@ -12982,7 +12991,7 @@ def admin_order_status():
 def admin_suppliers():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM suppliers WHERE active=1 ORDER BY name")
+    execute_query(cursor,"SELECT * FROM suppliers WHERE active=1 ORDER BY name")
     suppliers = cursor.fetchall()
     conn.close()
     return jsonify(suppliers)
@@ -13001,10 +13010,10 @@ def admin_supplier_save():
     conn = get_db()
     cursor = conn.cursor()
     if sup_id:
-        cursor.execute("UPDATE suppliers SET name=?, company=?, phone=?, email=?, address=?, contact_person=? WHERE id=?", 
+        execute_query(cursor,"UPDATE suppliers SET name=?, company=?, phone=?, email=?, address=?, contact_person=? WHERE id=?", 
                       (name, company, phone, email, address, contact_person, sup_id))
     else:
-        cursor.execute("INSERT INTO suppliers (name, company, phone, email, address, contact_person) VALUES (?,?,?,?,?,?)",
+        execute_query(cursor,"INSERT INTO suppliers (name, company, phone, email, address, contact_person) VALUES (?,?,?,?,?,?)",
                       (name, company, phone, email, address, contact_person))
     conn.commit()
     conn.close()
@@ -13015,7 +13024,7 @@ def admin_supplier_save():
 def admin_supplier_delete(sup_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE suppliers SET active=0 WHERE id=?", (sup_id,))
+    execute_query(cursor,"UPDATE suppliers SET active=0 WHERE id=?", (sup_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -13027,7 +13036,7 @@ def admin_supplier_delete(sup_id):
 def admin_stock_in():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT si.*, p.name as product_name, s.name as supplier_name 
         FROM stock_in si
         LEFT JOIN products p ON si.product_id = p.id
@@ -13053,24 +13062,24 @@ def admin_stock_in_save():
     cursor = conn.cursor()
     
     # Récupérer le nom du produit et du fournisseur pour le log
-    cursor.execute("SELECT name FROM products WHERE id=?", (product_id,))
+    execute_query(cursor,"SELECT name FROM products WHERE id=?", (product_id,))
     product = cursor.fetchone()
     product_name = product['name'] if product else 'Produit'
     
     supplier_name = ''
     if supplier_id:
-        cursor.execute("SELECT name FROM suppliers WHERE id=?", (supplier_id,))
+        execute_query(cursor,"SELECT name FROM suppliers WHERE id=?", (supplier_id,))
         supplier = cursor.fetchone()
         supplier_name = supplier['name'] if supplier else ''
     
     # 1. Insérer l'entrée stock
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO stock_in (product_id, supplier_id, quantity, purchase_price, total, notes) 
         VALUES (?, ?, ?, ?, ?, ?)
     """, (product_id, supplier_id, quantity, purchase_price, total, notes))
     
     # 2. Mettre à jour le produit
-    cursor.execute("""
+    execute_query(cursor,"""
         UPDATE products 
         SET stock = stock + ?, 
             prix_achat = ?,
@@ -13079,7 +13088,7 @@ def admin_stock_in_save():
     """, (quantity, purchase_price, prix_vente, product_id))
     
     # ========== CORRECTION : Utiliser user_logs ==========
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO user_logs (user_id, action, ip_address)
         VALUES (?, ?, ?)
     """, (session.get('user_id'), f"achat: {product_name} x{quantity} - {supplier_name} - {total:.2f} DNT", request.remote_addr))
@@ -13088,7 +13097,7 @@ def admin_stock_in_save():
     conn.commit()
     
     # 3. Récupérer les données mises à jour
-    cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    execute_query(cursor,"SELECT * FROM products WHERE id = ?", (product_id,))
     updated_product = cursor.fetchone()
     
     conn.close()
@@ -13102,7 +13111,7 @@ def admin_stock_in_save():
 def admin_stock_out():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             so.*, 
             p.name as product_name,
@@ -13125,7 +13134,7 @@ def admin_stock_out_deleted():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT so.*, p.name as product_name, o.status as order_status, o.order_number
         FROM stock_out so
         LEFT JOIN products p ON so.product_id = p.id
@@ -13159,14 +13168,14 @@ def admin_stock_out_save():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT name, prix_achat FROM products WHERE id=?", (product_id,))
+    execute_query(cursor,"SELECT name, prix_achat FROM products WHERE id=?", (product_id,))
     product = cursor.fetchone()
     product_name = product['name'] if product else 'Produit'
     purchase_price = product['prix_achat'] if product else 0
     profit = total - (quantity * purchase_price)
     
     # Créer la table tickets si elle n'existe pas
-    cursor.execute('''
+    execute_query(cursor,'''
         CREATE TABLE IF NOT EXISTS tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero TEXT UNIQUE NOT NULL,
@@ -13182,7 +13191,7 @@ def admin_stock_out_save():
     ''')
     
     # Générer numéro de ticket
-    cursor.execute("SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
+    execute_query(cursor,"SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
     if last:
         num = int(last['numero'].split('-')[1]) + 1
@@ -13191,21 +13200,21 @@ def admin_stock_out_save():
         ticket_num = "TICKET-001"
     
     # Enregistrer le ticket
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO tickets (numero, client_name, client_phone, client_email, product_name, quantity, price, total)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (ticket_num, client_name, client_phone, client_email, product_name, quantity, sale_price, total))
     
     # Enregistrer la sortie stock avec le vendeur
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO stock_out (product_id, client_name, client_phone, client_email, client_address, quantity, sale_price, total, profit, notes, seller_id, seller_name, sale_type)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'direct')
     """, (product_id, client_name, client_phone, client_email, client_address, quantity, sale_price, total, profit, notes, seller_id, seller_name))
     
-    cursor.execute("UPDATE products SET stock = stock - ? WHERE id=?", (quantity, product_id))
+    execute_query(cursor,"UPDATE products SET stock = stock - ? WHERE id=?", (quantity, product_id))
     
     # == CORRECTION : Utiliser user_logs au lieu de system_logs =====
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO user_logs (user_id, action, ip_address)
         VALUES (?, ?, ?)
     """, (seller_id, f"vente: {product_name} x{quantity} - {client_name} - {total:.2f} DNT", request.remote_addr))
@@ -13230,7 +13239,7 @@ def admin_stock_out_last_ticket():
 def admin_tickets():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tickets ORDER BY date DESC LIMIT 100")
+    execute_query(cursor,"SELECT * FROM tickets ORDER BY date DESC LIMIT 100")
     tickets = cursor.fetchall()
     conn.close()
     return jsonify(tickets)
@@ -13240,7 +13249,7 @@ def admin_tickets():
 def admin_ticket(ticket_number):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tickets WHERE numero=?", (ticket_number,))
+    execute_query(cursor,"SELECT * FROM tickets WHERE numero=?", (ticket_number,))
     ticket = cursor.fetchone()
     conn.close()
     return jsonify(ticket)
@@ -13253,7 +13262,7 @@ def admin_clients():
     conn = get_db()
     cursor = conn.cursor()
     # Récupérer TOUS les utilisateurs avec rôle 'client' depuis la table users
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT id, username, fullname as name, email, phone, 
                created_at, last_login, active 
         FROM users 
@@ -13265,7 +13274,7 @@ def admin_clients():
     # Pour chaque client, calculer le total des achats depuis les commandes
     for client in clients:
         # Chercher les commandes par email ou téléphone
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT COUNT(*) as total_orders, SUM(total) as total_achats 
             FROM orders 
             WHERE client_email = ? OR client_phone = ?
@@ -13275,7 +13284,7 @@ def admin_clients():
         client['total_achats'] = stats['total_achats'] or 0
         
         # Dernière commande
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT date FROM orders 
             WHERE client_email = ? OR client_phone = ?
             ORDER BY date DESC LIMIT 1
@@ -13296,21 +13305,21 @@ def admin_stats():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT COUNT(*) as count FROM products WHERE active=1")
+    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE active=1")
     products = cursor.fetchone()['count']
     
-    cursor.execute("SELECT SUM(stock) as total FROM products WHERE active=1")
+    execute_query(cursor,"SELECT SUM(stock) as total FROM products WHERE active=1")
     row = cursor.fetchone()
     stock_total = row['total'] or 0 if row else 0
     
-    cursor.execute("SELECT COUNT(*) as count FROM products WHERE stock <= stock_min AND active=1")
+    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE stock <= stock_min AND active=1")
     alert_products = cursor.fetchone()['count']
     
     today = datetime.now().strftime('%Y-%m-%d')
     
     # ====== CORRECTION : Inclure 'shipped' dans les commandes validées ======
     # Commandes en ligne du jour (exclure 'cancelled', inclure 'shipped')
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
         FROM orders 
         WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')
@@ -13320,7 +13329,7 @@ def admin_stats():
     orders_today_ca = orders_today_data['total'] or 0
     
     # Ventes directes (caisse) du jour
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
         FROM stock_out 
         WHERE sale_type = 'direct' AND date LIKE ?
@@ -13336,14 +13345,14 @@ def admin_stats():
     # CA du mois (exclure les commandes annulées et en attente)
     month_start = datetime.now().replace(day=1).strftime('%Y-%m-%d')
     
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT COALESCE(SUM(total), 0) as total 
         FROM orders 
         WHERE date >= ? AND status NOT IN ('cancelled', 'pending')
     """, (month_start,))
     orders_month_ca = cursor.fetchone()['total'] or 0
     
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT COALESCE(SUM(total), 0) as total 
         FROM stock_out 
         WHERE sale_type = 'direct' AND date >= ?
@@ -13353,16 +13362,16 @@ def admin_stats():
     ca_mois = orders_month_ca + direct_month_ca
     
     # CA total (exclure les commandes annulées et en attente)
-    cursor.execute("SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE status NOT IN ('cancelled', 'pending')")
+    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE status NOT IN ('cancelled', 'pending')")
     orders_total_ca = cursor.fetchone()['total'] or 0
     
-    cursor.execute("SELECT COALESCE(SUM(total), 0) as total FROM stock_out WHERE sale_type = 'direct'")
+    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM stock_out WHERE sale_type = 'direct'")
     direct_total_ca = cursor.fetchone()['total'] or 0
     
     ca_total = orders_total_ca + direct_total_ca
     
     # Bénéfice total
-    cursor.execute("SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
+    execute_query(cursor,"SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
     profit_total = cursor.fetchone()['total'] or 0
     
     conn.close()
@@ -13385,7 +13394,7 @@ def admin_stats():
 def admin_promotions():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM promotions ORDER BY id DESC")
+    execute_query(cursor,"SELECT * FROM promotions ORDER BY id DESC")
     promotions = cursor.fetchall()
     conn.close()
     return jsonify(promotions)
@@ -13408,10 +13417,10 @@ def admin_promotion_save():
     conn = get_db()
     cursor = conn.cursor()
     if promo_id:
-        cursor.execute("UPDATE promotions SET code=?, description=?, discount_type=?, discount_value=?, min_purchase=?, start_date=?, end_date=?, usage_limit=?, active=? WHERE id=?",
+        execute_query(cursor,"UPDATE promotions SET code=?, description=?, discount_type=?, discount_value=?, min_purchase=?, start_date=?, end_date=?, usage_limit=?, active=? WHERE id=?",
                       (code, description, discount_type, discount_value, min_purchase, start_date, end_date, usage_limit, active, promo_id))
     else:
-        cursor.execute("INSERT INTO promotions (code, description, discount_type, discount_value, min_purchase, start_date, end_date, usage_limit, active) VALUES (?,?,?,?,?,?,?,?,?)",
+        execute_query(cursor,"INSERT INTO promotions (code, description, discount_type, discount_value, min_purchase, start_date, end_date, usage_limit, active) VALUES (?,?,?,?,?,?,?,?,?)",
                       (code, description, discount_type, discount_value, min_purchase, start_date, end_date, usage_limit, active))
     conn.commit()
     conn.close()
@@ -13422,7 +13431,7 @@ def admin_promotion_save():
 def admin_promotion_delete(promo_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM promotions WHERE id=?", (promo_id,))
+    execute_query(cursor,"DELETE FROM promotions WHERE id=?", (promo_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -13435,7 +13444,7 @@ def apply_promo():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM promotions WHERE code=? AND active=1", (code,))
+    execute_query(cursor,"SELECT * FROM promotions WHERE code=? AND active=1", (code,))
     promo = cursor.fetchone()
     
     if not promo:
@@ -13476,7 +13485,7 @@ def add_review():
     data = request.json
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO reviews (product_id, client_name, client_email, rating, comment, approved)
         VALUES (?, ?, ?, ?, ?, 1)
     """, (data['product_id'], data['client_name'], data['client_email'], data['rating'], data['comment']))
@@ -13494,7 +13503,7 @@ def api_order():
     cursor = conn.cursor()
     
     # Insérer la commande
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO orders (order_number, client_name, client_phone, client_email, client_address, items, total)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (order_number, data['client_name'], data['client_phone'], data['client_email'], 
@@ -13502,19 +13511,19 @@ def api_order():
     
     # Enregistrer dans stock_out avec sale_type = 'order'
     for item in data['items']:
-        cursor.execute("SELECT prix_achat FROM products WHERE id=?", (item['id'],))
+        execute_query(cursor,"SELECT prix_achat FROM products WHERE id=?", (item['id'],))
         product = cursor.fetchone()
         purchase_price = product['prix_achat'] if product else 0
         profit = (item['price'] - purchase_price) * item['quantity']
         
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO stock_out (product_id, client_name, client_phone, client_email, client_address, quantity, sale_price, total, profit, notes, sale_type, order_number, seller_name)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'order', ?, ?)
         """, (item['id'], data['client_name'], data['client_phone'], data['client_email'], data['client_address'],
               item['quantity'], item['price'], item['price'] * item['quantity'], profit, 
               f"Commande en ligne #{order_number}", order_number, 'Client en ligne'))
         
-        cursor.execute("UPDATE products SET stock = stock - ? WHERE id=?", (item['quantity'], item['id']))
+        execute_query(cursor,"UPDATE products SET stock = stock - ? WHERE id=?", (item['quantity'], item['id']))
     
     conn.commit()
     conn.close()
@@ -13527,7 +13536,7 @@ def api_order():
 def admin_sliders():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM sliders ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM sliders ORDER BY order_position")
     sliders = cursor.fetchall()
     conn.close()
     return jsonify(sliders)
@@ -13564,13 +13573,13 @@ def admin_slider_save():
     cursor = conn.cursor()
     if slider_id:
         if image_name:
-            cursor.execute("UPDATE sliders SET title=?, subtitle=?, button_text=?, button_link=?, image=?, order_position=?, active=? WHERE id=?",
+            execute_query(cursor,"UPDATE sliders SET title=?, subtitle=?, button_text=?, button_link=?, image=?, order_position=?, active=? WHERE id=?",
                           (title, subtitle, button_text, button_link, image_name, order_position, active, slider_id))
         else:
-            cursor.execute("UPDATE sliders SET title=?, subtitle=?, button_text=?, button_link=?, order_position=?, active=? WHERE id=?",
+            execute_query(cursor,"UPDATE sliders SET title=?, subtitle=?, button_text=?, button_link=?, order_position=?, active=? WHERE id=?",
                           (title, subtitle, button_text, button_link, order_position, active, slider_id))
     else:
-        cursor.execute("INSERT INTO sliders (title, subtitle, button_text, button_link, image, order_position, active) VALUES (?,?,?,?,?,?,?)",
+        execute_query(cursor,"INSERT INTO sliders (title, subtitle, button_text, button_link, image, order_position, active) VALUES (?,?,?,?,?,?,?)",
                       (title, subtitle, button_text, button_link, image_name, order_position, active))
     conn.commit()
     conn.close()
@@ -13581,7 +13590,7 @@ def admin_slider_save():
 def admin_slider_delete(slider_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM sliders WHERE id=?", (slider_id,))
+    execute_query(cursor,"DELETE FROM sliders WHERE id=?", (slider_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -13596,7 +13605,7 @@ def admin_users():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, fullname, email, phone, role, active, last_login, created_at FROM users ORDER BY id")
+    execute_query(cursor,"SELECT id, username, fullname, email, phone, role, active, last_login, created_at FROM users ORDER BY id")
     users = cursor.fetchall()
     conn.close()
     return jsonify(users)
@@ -13622,18 +13631,18 @@ def admin_user_save():
     if user_id:
         if password:
             hashed = hashlib.sha256(password.encode()).hexdigest()
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE users SET username=?, fullname=?, email=?, phone=?, role=?, active=?, password=?
                 WHERE id=?
             """, (username, fullname, email, phone, role, active, hashed, user_id))
         else:
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE users SET username=?, fullname=?, email=?, phone=?, role=?, active=?
                 WHERE id=?
             """, (username, fullname, email, phone, role, active, user_id))
     else:
         hashed = hashlib.sha256(password.encode()).hexdigest()
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO users (username, password, fullname, email, phone, role, active)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (username, hashed, fullname, email, phone, role, active))
@@ -13653,7 +13662,7 @@ def admin_user_delete(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
+    execute_query(cursor,"DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -13666,7 +13675,7 @@ def admin_user_logs(user_id):
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM user_logs WHERE user_id=? ORDER BY date DESC LIMIT 50", (user_id,))
+    execute_query(cursor,"SELECT * FROM user_logs WHERE user_id=? ORDER BY date DESC LIMIT 50", (user_id,))
     logs = cursor.fetchall()
     conn.close()
     return jsonify(logs)
@@ -13681,7 +13690,7 @@ def api_client_login():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username=? AND password=? AND active=1 AND role='client'", (username, password))
+    execute_query(cursor,"SELECT * FROM users WHERE username=? AND password=? AND active=1 AND role='client'", (username, password))
     user = cursor.fetchone()
     conn.close()
     
@@ -13721,13 +13730,13 @@ def api_client_register():
     cursor = conn.cursor()
     
     # Vérifier si l'utilisateur existe déjà
-    cursor.execute("SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
+    execute_query(cursor,"SELECT id FROM users WHERE username = ? OR email = ?", (username, email))
     if cursor.fetchone():
         conn.close()
         return jsonify({'success': False, 'error': 'Nom d\'utilisateur ou email déjà utilisé'})
     
     # Insérer le nouvel utilisateur
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO users (username, password, fullname, email, phone, role, active)
         VALUES (?, ?, ?, ?, ?, 'client', 1)
     """, (username, hashed_password, fullname, email, phone_digits))
@@ -13754,11 +13763,11 @@ def compte_client():
     cursor = conn.cursor()
     
     # Récupérer les infos du client
-    cursor.execute("SELECT * FROM users WHERE id=?", (session.get('client_id'),))
+    execute_query(cursor,"SELECT * FROM users WHERE id=?", (session.get('client_id'),))
     client = cursor.fetchone()
     
     # Récupérer les commandes du client
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT * FROM orders 
         WHERE client_email = ? OR client_phone = ?
         ORDER BY date DESC
@@ -13776,21 +13785,21 @@ def compte_client():
     
     if product_ids:
         placeholders = ','.join('?' * len(product_ids))
-        cursor.execute(f"SELECT * FROM products WHERE id IN ({placeholders})", tuple(product_ids))
+        execute_query(cursor,f"SELECT * FROM products WHERE id IN ({placeholders})", tuple(product_ids))
         products_bought = cursor.fetchall()
     
     # Récupérer les avis déjà laissés par le client
-    cursor.execute("SELECT product_id FROM reviews WHERE client_email=?", (client['email'],))
+    execute_query(cursor,"SELECT product_id FROM reviews WHERE client_email=?", (client['email'],))
     reviewed_products = [r['product_id'] for r in cursor.fetchall()]
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
@@ -13817,17 +13826,17 @@ def submit_review():
     cursor = conn.cursor()
     
     # Vérifier si le client a déjà laissé un avis
-    cursor.execute("SELECT id FROM reviews WHERE product_id=? AND client_email=?", 
+    execute_query(cursor,"SELECT id FROM reviews WHERE product_id=? AND client_email=?", 
                    (product_id, session.get('client_email')))
     existing = cursor.fetchone()
     
     if existing:
-        cursor.execute("""
+        execute_query(cursor,"""
             UPDATE reviews SET rating=?, comment=?, date=CURRENT_TIMESTAMP
             WHERE product_id=? AND client_email=?
         """, (rating, comment, product_id, session.get('client_email')))
     else:
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO reviews (product_id, client_name, client_email, rating, comment, approved)
             VALUES (?, ?, ?, ?, ?, 1)
         """, (product_id, session.get('client_name'), session.get('client_email'), rating, comment))
@@ -13845,7 +13854,7 @@ def cancel_order(order_number):
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM orders WHERE order_number=? AND client_email=?", 
+    execute_query(cursor,"SELECT * FROM orders WHERE order_number=? AND client_email=?", 
                    (order_number, session.get('client_email')))
     order = cursor.fetchone()
     
@@ -13859,7 +13868,7 @@ def cancel_order(order_number):
         return jsonify({'success': False, 'error': 'Cette commande ne peut plus être annulée'})
     
     # Annuler la commande (stock non déduit car toujours en pending)
-    cursor.execute("UPDATE orders SET status='cancelled' WHERE order_number=?", (order_number,))
+    execute_query(cursor,"UPDATE orders SET status='cancelled' WHERE order_number=?", (order_number,))
     
     conn.commit()
     conn.close()
@@ -13878,14 +13887,14 @@ def caisse():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     # MODIFICATION ICI : Récupérer TOUS les produits actifs (pas seulement ceux avec stock > 0)
-    cursor.execute("SELECT * FROM products WHERE active=1 ORDER BY name")
+    execute_query(cursor,"SELECT * FROM products WHERE active=1 ORDER BY name")
     products = cursor.fetchall()
     
     # Debug : Afficher le nombre de produits
@@ -13905,20 +13914,20 @@ def checkout_page():
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     # Récupérer les infos du client connecté
     client_info = {}
     if session.get('client_logged_in'):
-        cursor.execute("SELECT fullname, email, phone FROM users WHERE id=?", (session.get('client_id'),))
+        execute_query(cursor,"SELECT fullname, email, phone FROM users WHERE id=?", (session.get('client_id'),))
         client = cursor.fetchone()
         if client:
             client_info = {
@@ -13956,7 +13965,7 @@ def api_checkout():
     client_email = data.get('client_email', '') or ''
     
     # Insérer la commande avec le total réduit
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO orders (order_number, client_name, client_phone, client_email, client_address, items, total, status, stock_deducted)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0)
     """, (order_number, data['client_name'], data['client_phone'], client_email, 
@@ -13968,7 +13977,7 @@ def api_checkout():
     # Utiliser l'ID du client connecté ou 0 pour anonyme
     user_id = session.get('client_id', 0)
     
-    cursor.execute("""
+    execute_query(cursor,"""
         INSERT INTO user_logs (user_id, action, ip_address)
         VALUES (?, ?, ?)
     """, (user_id, f"commande: {order_number} - {data['client_name']} - {total:.2f} DNT", request.remote_addr))
@@ -13987,7 +13996,7 @@ def api_checkout():
 def admin_reviews():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT r.*, p.name as product_name 
         FROM reviews r
         LEFT JOIN products p ON r.product_id = p.id
@@ -14002,7 +14011,7 @@ def admin_reviews():
 def admin_review_delete(review_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM reviews WHERE id=?", (review_id,))
+    execute_query(cursor,"DELETE FROM reviews WHERE id=?", (review_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -14014,7 +14023,7 @@ def admin_review_delete(review_id):
 def admin_settings():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings_rows = cursor.fetchall()
     settings = {row['key']: row['value'] for row in settings_rows}
     conn.close()
@@ -14026,7 +14035,7 @@ def admin_settings_save():
     conn = get_db()
     cursor = conn.cursor()
     for key, value in request.form.items():
-        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+        execute_query(cursor,"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -14038,15 +14047,15 @@ def admin_settings_save():
 def products_page():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products WHERE active=1 ORDER BY created_at DESC")
+    execute_query(cursor,"SELECT * FROM products WHERE active=1 ORDER BY created_at DESC")
     products = cursor.fetchall()
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
@@ -14060,15 +14069,15 @@ def products_page():
 def promotions_page():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products WHERE prix_promo IS NOT NULL AND prix_promo > 0 AND active=1")
+    execute_query(cursor,"SELECT * FROM products WHERE prix_promo IS NOT NULL AND prix_promo > 0 AND active=1")
     products = cursor.fetchall()
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
@@ -14082,21 +14091,21 @@ def promotions_page():
 def about_page():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT value FROM settings WHERE key='about_text'")
+    execute_query(cursor,"SELECT value FROM settings WHERE key='about_text'")
     row = cursor.fetchone()
     about_text = row['value'] if row else "New Decors est votre spécialiste de la décoration d'intérieur en Tunisie."
     
-    cursor.execute("SELECT * FROM team_members WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM team_members WHERE active=1 ORDER BY order_position")
     team_members = cursor.fetchall()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
@@ -14111,14 +14120,14 @@ def about_page():
 def contact_page():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
@@ -14133,7 +14142,7 @@ def product_detail(slug):
     cursor = conn.cursor()
     
     # Récupérer le produit
-    cursor.execute("SELECT * FROM products WHERE slug=? AND active=1", (slug,))
+    execute_query(cursor,"SELECT * FROM products WHERE slug=? AND active=1", (slug,))
     product = cursor.fetchone()
     if not product:
         return "Produit non trouvé", 404
@@ -14142,11 +14151,11 @@ def product_detail(slug):
         product['image'] = 'default.jpg'
     
     # Récupérer les images de la galerie
-    cursor.execute("SELECT * FROM product_images WHERE product_id=? ORDER BY order_position", (product['id'],))
+    execute_query(cursor,"SELECT * FROM product_images WHERE product_id=? ORDER BY order_position", (product['id'],))
     product_images = cursor.fetchall()
     
     # Récupérer la catégorie
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT c.id, c.name, c.slug FROM categories c
         LEFT JOIN subcategories s ON s.category_id = c.id
         WHERE s.id = ?
@@ -14155,7 +14164,7 @@ def product_detail(slug):
     
     # Produits similaires
     if category:
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT p.* FROM products p
             LEFT JOIN subcategories s ON p.subcategory_id = s.id
             WHERE s.category_id = ? AND p.id != ? AND p.active=1
@@ -14166,19 +14175,19 @@ def product_detail(slug):
         similar_products = []
     
     # Avis
-    cursor.execute("SELECT * FROM reviews WHERE product_id=? AND approved=1 ORDER BY date DESC", (product['id'],))
+    execute_query(cursor,"SELECT * FROM reviews WHERE product_id=? AND approved=1 ORDER BY date DESC", (product['id'],))
     reviews = cursor.fetchall()
     
     # Catégories pour le menu avec sous-catégories
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for cat in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
     # Paramètres
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
     conn.close()
@@ -14199,12 +14208,12 @@ def product_detail(slug):
 def category_page(slug):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, description FROM categories WHERE slug=?", (slug,))
+    execute_query(cursor,"SELECT id, name, description FROM categories WHERE slug=?", (slug,))
     cat = cursor.fetchone()
     if not cat:
         return "Catégorie non trouvée", 404
     
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT p.* FROM products p
         LEFT JOIN subcategories s ON p.subcategory_id = s.id
         WHERE s.category_id = ? AND p.active=1
@@ -14212,14 +14221,14 @@ def category_page(slug):
     """, (cat['id'],))
     products = cursor.fetchall()
     
-    cursor.execute("SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
     for c in categories:
-        cursor.execute("SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (c['id'],))
+        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (c['id'],))
         c['subcategories'] = cursor.fetchall()
     
-    cursor.execute("SELECT key, value FROM settings")
+    execute_query(cursor,"SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     conn.close()
     
@@ -14238,7 +14247,7 @@ def category_page(slug):
 def admin_team():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM team_members  ORDER BY order_position")
+    execute_query(cursor,"SELECT * FROM team_members  ORDER BY order_position")
     team = cursor.fetchall()
     conn.close()
     return jsonify(team)
@@ -14264,17 +14273,17 @@ def admin_team_save():
     
     if team_id:
         if image_name:
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE team_members SET name=?, position=?, bio=?, email=?, image=?, order_position=?, active=?
                 WHERE id=?
             """, (name, position, bio, email, image_name, order_position, active, team_id))
         else:
-            cursor.execute("""
+            execute_query(cursor,"""
                 UPDATE team_members SET name=?, position=?, bio=?, email=?, order_position=?, active=?
                 WHERE id=?
             """, (name, position, bio, email, order_position, active, team_id))
     else:
-        cursor.execute("""
+        execute_query(cursor,"""
             INSERT INTO team_members (name, position, bio, email, image, order_position, active)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (name, position, bio, email, image_name, order_position, active))
@@ -14288,7 +14297,7 @@ def admin_team_save():
 def admin_team_delete(team_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM team_members WHERE id=?", (team_id,))
+    execute_query(cursor,"DELETE FROM team_members WHERE id=?", (team_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -14307,7 +14316,7 @@ def admin_history_sales():
     cursor = conn.cursor()
     
     # Récupérer toutes les dates entre start_date et end_date
-    cursor.execute("""
+    execute_query(cursor,"""
         WITH RECURSIVE dates(date) AS (
             SELECT ?
             UNION ALL
@@ -14325,7 +14334,7 @@ def admin_history_sales():
     
     # Ventes depuis stock_out
     if sale_type == 'all' or sale_type == 'order':
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT 
                 date(so.date) as sale_date,
                 COUNT(*) as nb_orders,
@@ -14340,7 +14349,7 @@ def admin_history_sales():
                 result_dict[row['sale_date']]['total_ca'] += row['total_ca']
     
     if sale_type == 'all' or sale_type == 'direct':
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT 
                 date(so.date) as sale_date,
                 COUNT(*) as nb_direct_sales,
@@ -14356,7 +14365,7 @@ def admin_history_sales():
     
     # Ajouter les commandes en ligne depuis orders (pour les commandes pending qui ne sont pas encore dans stock_out)
     if sale_type == 'all' or sale_type == 'order':
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT 
                 date(o.date) as sale_date,
                 COUNT(*) as nb_orders_pending,
@@ -14397,7 +14406,7 @@ def admin_history_purchases():
         GROUP BY date(date)
         ORDER BY date(date) DESC
     """
-    cursor.execute(query, (start_date, end_date))
+    execute_query(cursor,query, (start_date, end_date))
     purchases = cursor.fetchall()
     conn.close()
     return jsonify(purchases)
@@ -14426,7 +14435,7 @@ def admin_history_products():
         ORDER BY total_sold DESC
         LIMIT 20
     """
-    cursor.execute(query, (start_date, end_date))
+    execute_query(cursor,query, (start_date, end_date))
     products = cursor.fetchall()
     conn.close()
     return jsonify(products)
@@ -14446,7 +14455,7 @@ def admin_history_export():
     
     # Récupérer d'abord les ventes
     if sale_type != 'all':
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT so.*, p.name as product_name
             FROM stock_out so
             LEFT JOIN products p ON so.product_id = p.id
@@ -14454,7 +14463,7 @@ def admin_history_export():
             ORDER BY so.date DESC
         """, (start_date, end_date, sale_type))
     else:
-        cursor.execute("""
+        execute_query(cursor,"""
             SELECT so.*, p.name as product_name
             FROM stock_out so
             LEFT JOIN products p ON so.product_id = p.id
@@ -14504,7 +14513,7 @@ def admin_history_summary():
     cursor = conn.cursor()
     
     # 1. Récupérer les ventes
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             date(date) as sale_date,
             COUNT(CASE WHEN sale_type = 'order' THEN 1 END) as nb_orders,
@@ -14520,7 +14529,7 @@ def admin_history_summary():
     sales = cursor.fetchall()
     
     # 2. Récupérer les achats
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             date(date) as purchase_date,
             COUNT(*) as nb_purchases,
@@ -14534,7 +14543,7 @@ def admin_history_summary():
     purchases = cursor.fetchall()
     
     # 3. Récupérer les top produits
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             p.name as product_name,
             p.reference,
@@ -14551,7 +14560,7 @@ def admin_history_summary():
     products = cursor.fetchall()
     
     # 4. Récupérer les performances vendeurs
-    cursor.execute("""
+    execute_query(cursor,"""
         SELECT 
             COALESCE(seller_name, 'Client en ligne') as seller_name,
             COUNT(*) as total_sales,
@@ -14611,7 +14620,7 @@ def admin_history_sales_detailed():
     
     query += " ORDER BY so.date DESC, so.id DESC"
     
-    cursor.execute(query, params)
+    execute_query(cursor,query, params)
     sales = cursor.fetchall()
     conn.close()
     
@@ -14632,7 +14641,7 @@ def admin_logs_filters():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users ORDER BY username")
+    execute_query(cursor,"SELECT id, username FROM users ORDER BY username")
     users = cursor.fetchall()
     conn.close()
     
@@ -14685,7 +14694,7 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    cursor.execute(query, params)
+    execute_query(cursor,query, params)
     logs = cursor.fetchall()
     
     # ========== STATISTIQUES AVEC FILTRES ==========
@@ -14704,27 +14713,27 @@ def admin_logs():
         filter_params.append(user_id)
     
     # Total
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}", filter_params)
     total = cursor.fetchone()['total']
     
     # Ventes
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')", filter_params)
     sales = cursor.fetchone()['total']
     
     # Achats
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')", filter_params)
     purchases = cursor.fetchone()['total']
     
     # Promotions
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'", filter_params)
     promos = cursor.fetchone()['total']
     
     # Commandes (inclure commande et commande_status)
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')", filter_params)
     orders = cursor.fetchone()['total']
     
     # Connexions
-    cursor.execute(f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')", filter_params)
+    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')", filter_params)
     users_count = cursor.fetchone()['total']
     # ===============================================
     
@@ -14749,7 +14758,7 @@ def admin_logs_clear():
     
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM user_logs")
+    execute_query(cursor,"DELETE FROM user_logs")
     conn.commit()
     conn.close()
     
@@ -14802,7 +14811,7 @@ def admin_stock_out_print():
     
     query += " ORDER BY so.date DESC"
     
-    cursor.execute(query, params)
+    execute_query(cursor,query, params)
     sales = cursor.fetchall()
     
     # Calculer les totaux
@@ -14851,7 +14860,7 @@ def migrate_to_supabase():
     
     for table in tables:
         try:
-            sqlite_cursor.execute(f"SELECT * FROM {table}")
+            sqlite_execute_query(cursor,f"SELECT * FROM {table}")
             rows = sqlite_cursor.fetchall()
             
             for row in rows:
@@ -14860,7 +14869,7 @@ def migrate_to_supabase():
                 placeholders = ','.join(['%s'] * len(columns))
                 columns_str = ','.join(columns)
                 
-                supabase_cursor.execute(f"""
+                supabase_execute_query(cursor,f"""
                     INSERT INTO {table} ({columns_str}) 
                     VALUES ({placeholders})
                     ON CONFLICT (id) DO NOTHING
