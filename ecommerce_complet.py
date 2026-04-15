@@ -73,10 +73,289 @@ def dict_factory(cursor, row):
 # ==================== FONCTION GET_DB (UNE SEULE VERSION) ====================
 
 def get_db():
-    """Retourne une connexion SQLite"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = dict_factory
-    return conn
+    """Retourne une connexion (PostgreSQL sur Render ou SQLite en local)"""
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    
+    if DATABASE_URL:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.cursor_factory = psycopg2.extras.RealDictCursor
+        return conn
+    else:
+        conn = sqlite3.connect(DATABASE)
+        conn.row_factory = dict_factory
+        return conn
+def init_postgres_tables():
+    """Crée les tables dans PostgreSQL (version adaptée)"""
+    import psycopg2
+    import psycopg2.extras
+    
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if not DATABASE_URL:
+        return
+    
+    conn = psycopg2.connect(DATABASE_URL)
+    cursor = conn.cursor()
+    
+    # Utilisateurs
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            fullname TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            role TEXT DEFAULT 'client',
+            active INTEGER DEFAULT 1,
+            last_login TIMESTAMP,
+            avatar TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # user_logs
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_logs (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            ip_address TEXT,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # order_logs
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS order_logs (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            old_status TEXT NOT NULL,
+            new_status TEXT NOT NULL,
+            action_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ip_address TEXT
+        )
+    ''')
+    
+    # Catégories
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            description TEXT,
+            icon TEXT,
+            order_position INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # Sous-catégories
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS subcategories (
+            id SERIAL PRIMARY KEY,
+            category_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            description TEXT
+        )
+    ''')
+    
+    # Produits
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id SERIAL PRIMARY KEY,
+            reference TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            description TEXT,
+            short_description TEXT,
+            subcategory_id INTEGER,
+            prix_achat REAL DEFAULT 0,
+            prix_vente REAL DEFAULT 0,
+            prix_promo REAL,
+            stock INTEGER DEFAULT 0,
+            stock_min INTEGER DEFAULT 5,
+            image TEXT,
+            featured INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # product_images
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS product_images (
+            id SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            image TEXT NOT NULL,
+            order_position INTEGER DEFAULT 0
+        )
+    ''')
+    
+    # Commandes
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+            order_number TEXT UNIQUE NOT NULL,
+            client_name TEXT NOT NULL,
+            client_phone TEXT NOT NULL,
+            client_email TEXT NOT NULL,
+            client_address TEXT NOT NULL,
+            items TEXT NOT NULL,
+            total REAL NOT NULL,
+            status TEXT DEFAULT 'pending',
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            stock_deducted INTEGER DEFAULT 0
+        )
+    ''')
+    
+    # Fournisseurs
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS suppliers (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            company TEXT,
+            phone TEXT,
+            email TEXT,
+            address TEXT,
+            contact_person TEXT,
+            active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # stock_in
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS stock_in (
+            id SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            supplier_id INTEGER,
+            quantity INTEGER NOT NULL,
+            purchase_price REAL NOT NULL,
+            total REAL NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes TEXT
+        )
+    ''')
+    
+    # stock_out
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS stock_out (
+            id SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            client_name TEXT NOT NULL,
+            client_phone TEXT NOT NULL,
+            client_email TEXT,
+            client_address TEXT,
+            quantity INTEGER NOT NULL,
+            sale_price REAL NOT NULL,
+            total REAL NOT NULL,
+            profit REAL NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes TEXT,
+            sale_type TEXT DEFAULT 'direct',
+            order_number TEXT,
+            seller_id INTEGER,
+            seller_name TEXT
+        )
+    ''')
+    
+    # Clients
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clients (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            phone TEXT UNIQUE,
+            email TEXT,
+            address TEXT,
+            total_achats REAL DEFAULT 0,
+            total_orders INTEGER DEFAULT 0,
+            last_order DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Sliders
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sliders (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            subtitle TEXT,
+            image TEXT,
+            button_text TEXT,
+            button_link TEXT,
+            order_position INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # Newsletter
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS newsletter (
+            id SERIAL PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Promotions
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS promotions (
+            id SERIAL PRIMARY KEY,
+            code TEXT UNIQUE NOT NULL,
+            description TEXT,
+            discount_type TEXT DEFAULT 'percentage',
+            discount_value REAL NOT NULL,
+            min_purchase REAL DEFAULT 0,
+            start_date DATE,
+            end_date DATE,
+            usage_limit INTEGER,
+            used_count INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # Reviews
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reviews (
+            id SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            client_name TEXT NOT NULL,
+            client_email TEXT,
+            rating INTEGER NOT NULL,
+            comment TEXT,
+            approved INTEGER DEFAULT 1,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Team members
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS team_members (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            position TEXT NOT NULL,
+            bio TEXT,
+            image TEXT,
+            email TEXT,
+            order_position INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1
+        )
+    ''')
+    
+    # Settings
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+    print("✅ Tables PostgreSQL créées")
 
 # ==================== FONCTIONS UTILITAIRES ====================
 
@@ -14592,9 +14871,14 @@ def init_db_if_needed():
 # Pour Render (Gunicorn) - s'exécute au démarrage
 if os.environ.get('RENDER'):
     print("🚀 Démarrage sur Render...")
-    init_db_if_needed()
-    migrate_orders()
-    print("✅ Base de données prête")
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        init_postgres_tables()
+        print("✅ PostgreSQL prêt")
+    else:
+        init_db_if_needed()
+        migrate_orders()
+        print("✅ SQLite prêt")
 
 if __name__ == '__main__':
     init_db_if_needed()
