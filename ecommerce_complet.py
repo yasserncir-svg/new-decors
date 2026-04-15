@@ -12391,7 +12391,8 @@ def login():
         
         conn = get_db()
         cursor = conn.cursor()
-        execute_query(cursor,"SELECT * FROM users WHERE username=? AND password=? AND active=1", (username, hashed_password))
+        # ⚠️ CHANGEMENT ICI : ? devient %s
+        execute_query(cursor, "SELECT * FROM users WHERE username=%s AND password=%s AND active=1", (username, hashed_password))
         user = cursor.fetchone()
         conn.close()
         
@@ -12399,9 +12400,9 @@ def login():
             # Enregistrer la connexion dans les logs
             conn = get_db()
             cursor = conn.cursor()
-            execute_query(cursor,"""
+            execute_query(cursor, """
                 INSERT INTO user_logs (user_id, action, ip_address)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
             """, (user['id'], 'login', request.remote_addr))
             conn.commit()
             conn.close()
@@ -12409,7 +12410,7 @@ def login():
             # Mettre à jour last_login
             conn = get_db()
             cursor = conn.cursor()
-            execute_query(cursor,"UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", (user['id'],))
+            execute_query(cursor, "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s", (user['id'],))
             conn.commit()
             conn.close()
             
@@ -12422,14 +12423,13 @@ def login():
             if user['role'] == 'admin':
                 return redirect(url_for('admin'))
             elif user['role'] == 'vendeur':
-                return redirect(url_for('admin'))  # Même page mais avec restrictions
+                return redirect(url_for('admin'))
             else:
                 return redirect(url_for('index'))
         else:
             return render_template_string(HTML_LOGIN, error="Identifiants invalides ou compte désactivé")
     
     return render_template_string(HTML_LOGIN)
-
 @app.route('/logout')
 def logout():
     session.clear()
