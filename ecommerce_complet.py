@@ -12389,11 +12389,40 @@ def login():
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         
+        # === LOGS DE DEBUG ===
+        import sys
+        print(f"=== DEBUG LOGIN ===", file=sys.stderr)
+        print(f"Username: {username}", file=sys.stderr)
+        print(f"Password hash: {hashed_password}", file=sys.stderr)
+        
         conn = get_db()
         cursor = conn.cursor()
-        # ⚠️ CHANGEMENT ICI : ? devient %s
-        execute_query(cursor, "SELECT * FROM users WHERE username=%s AND password=%s AND active=1", (username, hashed_password))
+        
+        DATABASE_URL = os.environ.get('DATABASE_URL')
+        print(f"DATABASE_URL existe: {DATABASE_URL is not None}", file=sys.stderr)
+        
+        if DATABASE_URL:
+            cursor.execute("SELECT * FROM users WHERE username=%s AND password=%s AND active=1", (username, hashed_password))
+        else:
+            cursor.execute("SELECT * FROM users WHERE username=? AND password=? AND active=1", (username, hashed_password))
+        
         user = cursor.fetchone()
+        print(f"User trouvé: {user is not None}", file=sys.stderr)
+        
+        if user:
+            print(f"User ID: {user.get('id')}, Role: {user.get('role')}", file=sys.stderr)
+        else:
+            # Vérifions si l'utilisateur existe au moins
+            if DATABASE_URL:
+                cursor.execute("SELECT username, active FROM users WHERE username=%s", (username,))
+            else:
+                cursor.execute("SELECT username, active FROM users WHERE username=?", (username,))
+            user_check = cursor.fetchone()
+            if user_check:
+                print(f"L'utilisateur {username} existe (active={user_check.get('active')}) mais mot de passe incorrect", file=sys.stderr)
+            else:
+                print(f"L'utilisateur {username} n'existe pas dans la base", file=sys.stderr)
+        
         conn.close()
         
         if user:
