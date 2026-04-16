@@ -13283,49 +13283,30 @@ def admin_stock_out_save():
     conn = get_db()
     cursor = conn.cursor()
     
-    execute_query(cursor,"SELECT name, prix_achat FROM products WHERE id=?", (product_id,))
+    execute_query(cursor, "SELECT name, prix_achat FROM products WHERE id=?", (product_id,))
     product = cursor.fetchone()
     product_name = product['name'] if product else 'Produit'
     purchase_price = product['prix_achat'] if product else 0
     profit = total - (quantity * purchase_price)
     
-    # Créer la table tickets si elle n'existe pas
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL:
-        # PostgreSQL
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tickets (
-                id SERIAL PRIMARY KEY,
-                numero TEXT UNIQUE NOT NULL,
-                client_name TEXT NOT NULL,
-                client_phone TEXT NOT NULL,
-                client_email TEXT,
-                product_name TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                price REAL NOT NULL,
-                total REAL NOT NULL,
-                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-    else:
-        # SQLite
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tickets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                numero TEXT UNIQUE NOT NULL,
-                client_name TEXT NOT NULL,
-                client_phone TEXT NOT NULL,
-                client_email TEXT,
-                product_name TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                price REAL NOT NULL,
-                total REAL NOT NULL,
-                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+    # Créer la table tickets si elle n'existe pas (version compatible)
+    execute_query(cursor, """
+        CREATE TABLE IF NOT EXISTS tickets (
+            id SERIAL PRIMARY KEY,
+            numero TEXT UNIQUE NOT NULL,
+            client_name TEXT NOT NULL,
+            client_phone TEXT NOT NULL,
+            client_email TEXT,
+            product_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            price REAL NOT NULL,
+            total REAL NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     
     # Générer numéro de ticket
-    execute_query(cursor,"SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
+    execute_query(cursor, "SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
     if last:
         num = int(last['numero'].split('-')[1]) + 1
@@ -13334,30 +13315,30 @@ def admin_stock_out_save():
         ticket_num = "TICKET-001"
     
     # Enregistrer le ticket
-    execute_query(cursor,"""
+    execute_query(cursor, """
         INSERT INTO tickets (numero, client_name, client_phone, client_email, product_name, quantity, price, total)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """, (ticket_num, client_name, client_phone, client_email, product_name, quantity, sale_price, total))
     
     # Enregistrer la sortie stock avec le vendeur
-    execute_query(cursor,"""
+    execute_query(cursor, """
         INSERT INTO stock_out (product_id, client_name, client_phone, client_email, client_address, quantity, sale_price, total, profit, notes, seller_id, seller_name, sale_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'direct')
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'direct')
     """, (product_id, client_name, client_phone, client_email, client_address, quantity, sale_price, total, profit, notes, seller_id, seller_name))
     
-    execute_query(cursor,"UPDATE products SET stock = stock - ? WHERE id=?", (quantity, product_id))
+    execute_query(cursor, "UPDATE products SET stock = stock - %s WHERE id=%s", (quantity, product_id))
     
-    # == CORRECTION : Utiliser user_logs au lieu de system_logs =====
-    execute_query(cursor,"""
+    # Enregistrer dans les logs
+    execute_query(cursor, """
         INSERT INTO user_logs (user_id, action, ip_address)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (seller_id, f"vente: {product_name} x{quantity} - {client_name} - {total:.2f} DNT", request.remote_addr))
-    # ===========================================
     
     conn.commit()
     conn.close()
     
     return jsonify({'success': True, 'ticket_number': ticket_num})
+    
     # ==================== API TICKET ====================
 
 @app.route('/admin/stock-out/last-ticket')
