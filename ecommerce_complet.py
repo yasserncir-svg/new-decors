@@ -5918,7 +5918,19 @@ async function loadDashboard() {
         console.error('Erreur dashboard:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
     }
-}
+// Gestion sidebar mobile
+document.addEventListener('click', function(e) {
+    if(window.innerWidth <= 992) {
+        let sidebar = document.getElementById('sidebar');
+        let toggleBtn = document.querySelector('.menu-toggle-btn');
+        if(!sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
+    }
+});
+</script>
+</body>
+</html>
 '''
 #======================Template detail produit ========
 HTML_PRODUCT_DETAIL = '''
