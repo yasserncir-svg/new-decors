@@ -7562,15 +7562,15 @@ def product_detail(slug):
     
     avg_rating = sum(r['rating'] for r in reviews) / len(reviews) if reviews else 0
     
-   return render_template('product_detail.html',   # ← CHANGEMENT ICI
-                                  product=product,
-                                  product_images=product_images,
-                                  category=category,
-                                  similar_products=similar_products,
-                                  reviews=reviews,
-                                  avg_rating=avg_rating,
-                                  categories=categories,
-                                  settings=settings)
+    return render_template('product_detail.html',
+                              product=product,
+                              product_images=product_images,
+                              category=category,
+                              similar_products=similar_products,
+                              reviews=reviews,
+                              avg_rating=avg_rating,
+                              categories=categories,
+                              settings=settings)
 
 @app.route('/category/<slug>')
 def category_page(slug):
