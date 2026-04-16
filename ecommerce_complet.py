@@ -7562,7 +7562,7 @@ def product_detail(slug):
     
     avg_rating = sum(r['rating'] for r in reviews) / len(reviews) if reviews else 0
     
-    return render_template_string(HTML_PRODUCT_DETAIL, 
+   return render_template('product_detail.html',   # ← CHANGEMENT ICI
                                   product=product,
                                   product_images=product_images,
                                   category=category,
