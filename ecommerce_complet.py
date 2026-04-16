@@ -7778,7 +7778,7 @@ def subcategory_page(slug):
     
     conn.close()
     
-    return render_template_string(HTML_INDEX, 
+    return render_template_string('index.html', 
                                   products=products,
                                   categories=categories,
                                   settings=settings,
@@ -9023,7 +9023,7 @@ def products_page():
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
-    return render_template_string(HTML_INDEX, 
+    return render_template_string('index.html', 
                                   products=products, 
                                   categories=categories,
                                   settings=settings, 
@@ -9045,7 +9045,7 @@ def promotions_page():
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
-    return render_template_string(HTML_INDEX, 
+    return render_template_string('index.html', 
                                   products=products, 
                                   categories=categories,
                                   settings=settings, 
@@ -9196,7 +9196,7 @@ def category_page(slug):
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     conn.close()
     
-    return render_template_string(HTML_INDEX, 
+    return render_template_string('index.html', 
                                   products=products, 
                                   categories=categories,
                                   settings=settings, 
