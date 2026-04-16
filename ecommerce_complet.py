@@ -8061,7 +8061,7 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    # Exécuter avec les paramètres
+    # Exécuter la requête principale
     if params:
         execute_query(cursor, query, params)
     else:
@@ -8092,11 +8092,14 @@ def admin_logs():
         else:
             full_query = f"SELECT COUNT(*) as total FROM user_logs ul{where_clause}"
         
+        # Vérifier si on a des paramètres
         if filter_params:
             execute_query(cursor, full_query, filter_params)
         else:
             execute_query(cursor, full_query)
-        return cursor.fetchone()['total']
+        
+        result = cursor.fetchone()
+        return result['total'] if result else 0
     
     total = run_count_query("")
     sales = run_count_query("(ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
@@ -8118,7 +8121,7 @@ def admin_logs():
             'users': users_count
         }
     })
-@app.route('/admin/logs/clear', methods=['DELETE'])
+    @app.route('/admin/logs/clear', methods=['DELETE'])
 @login_required
 def admin_logs_clear():
     if session.get('role') != 'admin':
