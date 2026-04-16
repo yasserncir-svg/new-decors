@@ -4865,6 +4865,7 @@ async function loadStockOut() {
 }
 
 function updateStockDisplay(data) {
+    console.log("updateStockDisplay appelé avec", data.length, "éléments");
     let totalQuantity = 0, totalRevenue = 0, totalProfit = 0, onlineCount = 0, directCount = 0;
     for (let i = 0; i < data.length; i++) {
         let s = data[i];
@@ -12305,7 +12306,7 @@ HTML_PRINT_STOCK = '''
         <tbody>
             {% for sale in sales %}
             <tr>
-                <td>{{ sale.date.split()[0] if sale.date else '-' }}</td>
+                <td>{% if sale.date %}{{ sale.date.strftime('%Y-%m-%d') if sale.date is not string else sale.date.split()[0] }}{% else %}-{% endif %}</td>
                 <td>{{ '📦 En ligne' if sale.sale_type == 'order' else '🛒 Caisse' }}</td>
                 <td>{{ sale.product_name or '-' }}</td>
                 <td>{{ sale.client_name or '-' }}</td>
