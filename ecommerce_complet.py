@@ -7450,11 +7450,10 @@ def promotions_page():
     
     conn.close()
     return render_template('index.html', 
-                          products=products,  # ← IMPORTANT: cette ligne doit exister
+                          products=products,
                           categories=categories,
                           settings=settings, 
-                          page_title='promotions'
-
+                          page_title='promotions')
 @app.route('/about')
 def about_page():
     conn = get_db()
