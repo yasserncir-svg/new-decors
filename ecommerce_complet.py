@@ -7778,13 +7778,13 @@ def subcategory_page(slug):
     
     conn.close()
     
-    return render_template_string('index.html', 
-                                  products=products,
+    return render_template('index.html', 
+                                  products=products, 
                                   categories=categories,
-                                  settings=settings,
-                                  category_name=sub['name'],
-                                  category_description=sub['description'] or '')
-
+                                  settings=settings, 
+                                  category_name=cat['name'],
+                                  category_description=cat['description'] or '')
+    
 # ==================== API COMMANDES ====================
 
 @app.route('/admin/orders')
@@ -9196,13 +9196,12 @@ def category_page(slug):
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     conn.close()
     
-    return render_template_string('index.html', 
-                                  products=products, 
-                                  categories=categories,
-                                  settings=settings, 
-                                  category_name=cat['name'],
-                                  category_description=cat['description'] or '')
-
+    return render_template('index.html', 
+                              products=products, 
+                              categories=categories,
+                              settings=settings, 
+                              category_name=cat['name'],
+                              category_description=cat['description'] or '')
 
 # ==================== API ÉQUIPE ====================
 
