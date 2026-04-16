@@ -8121,7 +8121,7 @@ def admin_logs():
             'users': users_count
         }
     })
-    @app.route('/admin/logs/clear', methods=['DELETE'])
+@app.route('/admin/logs/clear', methods=['DELETE'])
 @login_required
 def admin_logs_clear():
     if session.get('role') != 'admin':
