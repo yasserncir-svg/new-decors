@@ -580,7 +580,10 @@
                 <div class="line"></div>
                 <div class="thankyou">MERCI DE VOTRE VISITE !</div>
             </div>
-            <script>setTimeout(function() { window.print(); window.close(); }, 500);<\/script>
+            <script>
+                window.print();
+                window.onafterprint = function() { window.close(); };
+            <\/script>
             </body>
             </html>
         `;
