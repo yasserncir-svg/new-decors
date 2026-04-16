@@ -7194,7 +7194,7 @@ def index():
     
     conn.close()
     
-    return render_template_string(HTML_INDEX, 
+    return render_template('index.html',
                                   categories=categories,
                                   sliders=sliders,
                                   products=new_products,
