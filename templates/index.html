@@ -1728,23 +1728,32 @@ async function handleRegister() {
     let password = document.getElementById('reg_password').value;
     let password2 = document.getElementById('reg_password2').value;
     
+    // Validation des champs obligatoires
     if (!username || !fullname || !email || !password) { 
         alert('Veuillez remplir tous les champs'); 
         return; 
     }
+    
+    // Validation du mot de passe (8 caractères minimum)
     if (password.length < 8) {
         alert('Le mot de passe doit contenir au moins 8 caractères');
         return;
     }
+    
+    // Vérifier si le mot de passe contient au moins un chiffre
     if (!/\d/.test(password)) {
         alert('Le mot de passe doit contenir au moins un chiffre');
         return;
     }
+    
+    // Validation du téléphone (minimum 8 chiffres)
     let phoneDigits = phone.replace(/\D/g, '');
     if (phoneDigits.length < 8) {
         alert('Le numéro de téléphone doit contenir au moins 8 chiffres');
         return;
     }
+    
+    // Vérifier que les mots de passe correspondent
     if (password !== password2) { 
         alert('Les mots de passe ne correspondent pas'); 
         return; 
@@ -1770,7 +1779,6 @@ async function handleRegister() {
         alert(data.error || 'Erreur');
     }
 }
-
 // Slider functions
 let currentSlide = 0, slides = [], slideInterval;
 function initSlider() {
@@ -1801,8 +1809,72 @@ function stopAutoSlide() { if (slideInterval) clearInterval(slideInterval); }
 function resetAutoSlide() { stopAutoSlide(); startAutoSlide(); }
 
 document.addEventListener('DOMContentLoaded', initSlider);
+// Ajoutez ces fonctions avant loadCart();
+function checkPasswordStrength(password) {
+    let strengthDiv = document.getElementById('passwordStrength');
+    if (!strengthDiv) return;
+    
+    let isValid = password.length >= 8 && /\d/.test(password);
+    
+    if (password.length === 0) {
+        strengthDiv.innerHTML = '';
+        strengthDiv.style.color = '';
+    } else if (password.length < 8) {
+        strengthDiv.innerHTML = '⚠️ Trop court (minimum 8 caractères)';
+        strengthDiv.style.color = '#e74c3c';
+    } else if (!/\d/.test(password)) {
+        strengthDiv.innerHTML = '⚠️ Doit contenir au moins un chiffre';
+        strengthDiv.style.color = '#e74c3c';
+    } else {
+        strengthDiv.innerHTML = '✓ Mot de passe valide';
+        strengthDiv.style.color = '#27ae60';
+    }
+}
+
+function validatePhone(phone) {
+    let phoneHelp = document.getElementById('phoneHelp');
+    let phoneInput = document.getElementById('reg_phone');
+    if (!phoneHelp || !phoneInput) return;
+    
+    let phoneDigits = phone.replace(/\D/g, '');
+    
+    if (phoneDigits.length === 0) {
+        phoneHelp.innerHTML = 'Minimum 8 chiffres';
+        phoneHelp.style.color = '#666';
+        phoneInput.style.borderColor = '#ddd';
+    } else if (phoneDigits.length < 8) {
+        phoneHelp.innerHTML = `⚠️ ${phoneDigits.length}/8 chiffres minimum`;
+        phoneHelp.style.color = '#e74c3c';
+        phoneInput.style.borderColor = '#e74c3c';
+    } else {
+        phoneHelp.innerHTML = '✓ Numéro valide';
+        phoneHelp.style.color = '#27ae60';
+        phoneInput.style.borderColor = '#27ae60';
+    }
+}
 
 loadCart();
+// Gestion du clic sur les cartes produits pour mobile
+document.addEventListener('DOMContentLoaded', function() {
+    // Pour chaque carte produit
+    document.querySelectorAll('.product-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // Éviter si on clique sur un bouton
+            if (e.target.closest('.add-to-cart-btn') || 
+                e.target.closest('.overlay-btn-cart') || 
+                e.target.closest('.btn-add-cart')) {
+                return;
+            }
+            
+            // Trouver le lien du produit
+            const productLink = card.querySelector('.product-title a, .btn-view');
+            if (productLink && productLink.href) {
+                window.location.href = productLink.href;
+            }
+        });
+    });
+});
+
 </script>
 </body>
 </html>
