@@ -5919,6 +5919,7 @@ async function loadDashboard() {
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
     }
 }
+'''
 #======================Template detail produit ========
 HTML_PRODUCT_DETAIL = '''
 <!DOCTYPE html>
