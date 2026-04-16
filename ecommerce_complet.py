@@ -13483,6 +13483,10 @@ def admin_stats():
     conn = get_db()
     cursor = conn.cursor()
     
+    # Récupérer le rôle de l'utilisateur
+    user_role = session.get('role')
+    is_admin = (user_role == 'admin')
+    
     execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE active=1")
     products = cursor.fetchone()['count']
     
@@ -13575,9 +13579,11 @@ def admin_stats():
     
     ca_total = orders_total_ca + direct_total_ca
     
-    # Bénéfice total
-    execute_query(cursor,"SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
-    profit_total = cursor.fetchone()['total'] or 0
+    # Bénéfice total (seulement pour l'admin)
+    profit_total = 0
+    if is_admin:
+        execute_query(cursor,"SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
+        profit_total = cursor.fetchone()['total'] or 0
     
     conn.close()
     
@@ -13589,9 +13595,9 @@ def admin_stats():
         'ca_jour': ca_jour,
         'ca_mois': ca_mois,
         'ca_total': ca_total,
-        'profit_total': profit_total
+        'profit_total': profit_total,
+        'is_admin': is_admin
     })
-
 # ==================== API PROMOTIONS ====================
 
 @app.route('/admin/promotions')
