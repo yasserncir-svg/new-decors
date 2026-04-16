@@ -14,11 +14,11 @@ from datetime import datetime
 from functools import wraps
 
 try:
-    from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for, send_from_directory
+    from flask import Flask, render_template_string, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 except ImportError:
     import subprocess
     subprocess.check_call(['pip', 'install', 'flask'])
-    from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for, send_from_directory
+    from flask import Flask, render_template_string, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 
 try:
     from PIL import Image
@@ -26,6 +26,7 @@ except ImportError:
     import subprocess
     subprocess.check_call(['pip', 'install', 'Pillow'])
     from PIL import Image
+
 # ==================== AJOUTER LE CODE SUPABASE ICI ====================
 from supabase import create_client
 
@@ -9142,7 +9143,7 @@ def admin():
     if session.get('role') == 'client':
         return redirect(url_for('index'))
     
-    return render_template_string(HTML_ADMIN)
+    return render_template('admin.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -10802,10 +10803,7 @@ def caisse():
     
     conn.close()
     
-    return render_template_string(HTML_CAISSE, 
-                                  settings=settings,
-                                  categories=categories,
-                                  products=products)
+    return render_template('caisse.html', settings=settings, categories=categories, products=products)
 
 # ================ API COMMANDE ====================
 
