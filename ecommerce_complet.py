@@ -7449,11 +7449,11 @@ def promotions_page():
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
-    return render_template_string('index.html', 
-                                  products=products, 
-                                  categories=categories,
-                                  settings=settings, 
-                                  page_title='promotions')
+    return render_template('index.html', 
+                          products=products,  # ← IMPORTANT: cette ligne doit exister
+                          categories=categories,
+                          settings=settings, 
+                          page_title='promotions'
 
 @app.route('/about')
 def about_page():
