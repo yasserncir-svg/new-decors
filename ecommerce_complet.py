@@ -4963,29 +4963,48 @@ function applyStockFilters() {
     let endDate = document.getElementById('filterEndDate').value;
     let filterType = document.getElementById('filterType').value;
     
+    console.log("=== APPLY FILTERS ===");
+    console.log("startDate:", startDate);
+    console.log("endDate:", endDate);
+    console.log("filterType:", filterType);
+    console.log("allStockData length:", allStockData.length);
+    
+    // Afficher un exemple de date
+    if (allStockData.length > 0) {
+        console.log("Exemple date brute:", allStockData[0].date);
+        console.log("Exemple date formatée:", allStockData[0].date ? allStockData[0].date.split(' ')[0] : 'pas de date');
+    }
+    
     let filtered = [...allStockData];
     
+    // Filtre par date de début
     if (startDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            let dateStr = s.date.split(' ')[0];
+            // Extraire la date (gère les formats PostgreSQL)
+            let dateStr = s.date.split('T')[0].split(' ')[0];
             return dateStr >= startDate;
         });
+        console.log("Après filtre date début:", filtered.length);
     }
+    
+    // Filtre par date de fin
     if (endDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            let dateStr = s.date.split(' ')[0];
+            let dateStr = s.date.split('T')[0].split(' ')[0];
             return dateStr <= endDate;
         });
-    }
-    if (filterType !== 'all') {
-        filtered = filtered.filter(s => s.sale_type === filterType);
+        console.log("Après filtre date fin:", filtered.length);
     }
     
-    // Ajouter un log pour debug
-    console.log("Données reçues:", allStockData);
-    console.log("Données filtrées:", filtered);
+    // Filtre par type
+    if (filterType && filterType !== 'all') {
+        filtered = filtered.filter(s => s.sale_type === filterType);
+        console.log("Après filtre type:", filtered.length);
+    }
+    
+    console.log("Données filtrées finales:", filtered.length);
     
     updateStockDisplay(filtered);
 }
