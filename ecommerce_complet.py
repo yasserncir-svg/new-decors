@@ -8029,15 +8029,13 @@ def admin_logs():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Requête principale
+    # ========== REQUÊTE PRINCIPALE ==========
     query = """
         SELECT 
             ul.id,
             ul.user_id,
             u.username,
-            ul.action as action_type,
-            ul.action as action,
-            ul.action as details,
+            ul.action,
             ul.ip_address,
             ul.date as created_at
         FROM user_logs ul
@@ -8061,25 +8059,61 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    # Exécuter la requête
+    # Exécution
     if params:
         execute_query(cursor, query, params)
     else:
         execute_query(cursor, query)
     logs = cursor.fetchall()
     
+    # ========== STATISTIQUES ==========
+    # Total des logs (avec filtres)
+    stats_query = "SELECT COUNT(*) as total FROM user_logs ul WHERE 1=1"
+    stats_params = []
+    
+    if start_date:
+        stats_query += " AND date(ul.date) >= %s"
+        stats_params.append(start_date)
+    if end_date:
+        stats_query += " AND date(ul.date) <= %s"
+        stats_params.append(end_date)
+    if user_id and user_id != 'all':
+        stats_query += " AND ul.user_id = %s"
+        stats_params.append(user_id)
+    
+    if stats_params:
+        execute_query(cursor, stats_query, stats_params)
+    else:
+        execute_query(cursor, stats_query)
+    total = cursor.fetchone()['total']
+    
+    # Stats par type (sans filtres de type pour éviter les doublons)
+    execute_query(cursor, "SELECT COUNT(*) as total FROM user_logs WHERE action LIKE '%vente%' OR action LIKE '%sale%'")
+    sales = cursor.fetchone()['total']
+    
+    execute_query(cursor, "SELECT COUNT(*) as total FROM user_logs WHERE action LIKE '%achat%' OR action LIKE '%purchase%' OR action LIKE '%stock-in%'")
+    purchases = cursor.fetchone()['total']
+    
+    execute_query(cursor, "SELECT COUNT(*) as total FROM user_logs WHERE action LIKE '%promo%'")
+    promos = cursor.fetchone()['total']
+    
+    execute_query(cursor, "SELECT COUNT(*) as total FROM user_logs WHERE action LIKE '%commande%' OR action LIKE '%order%'")
+    orders = cursor.fetchone()['total']
+    
+    execute_query(cursor, "SELECT COUNT(*) as total FROM user_logs WHERE action LIKE '%login%' OR action LIKE '%logout%'")
+    users_count = cursor.fetchone()['total']
+    
     conn.close()
     
-    # Retourner les logs sans statistiques
     return jsonify({
         'logs': logs,
         'stats': {
-            'total': len(logs),
-            'sales': 0,
-            'purchases': 0,
-            'promos': 0,
-            'orders': 0,
-            'users': 0
+            'total': total,
+            'sales': sales,
+            'purchases': purchases,
+            'promos': promos,
+            'orders': orders,
+            'users': users_count
         }
     })
     
