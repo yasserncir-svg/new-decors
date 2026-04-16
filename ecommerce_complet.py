@@ -8061,31 +8061,28 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    # Exécuter la requête principale
+    # Exécuter la requête
     if params:
         execute_query(cursor, query, params)
     else:
         execute_query(cursor, query)
     logs = cursor.fetchall()
     
-    # ========== STATISTIQUES ==========
-    # Construire les conditions WHERE
-    conditions = []
-    filter_params = []
+    conn.close()
     
-    if start_date:
-        conditions.append("date(ul.date) >= %s")
-        filter_params.append(start_date)
-    if end_date:
-        conditions.append("date(ul.date) <= %s")
-        filter_params.append(end_date)
-    if user_id and user_id != 'all':
-        conditions.append("ul.user_id = %s")
-        filter_params.append(user_id)
+    # Retourner les logs sans statistiques
+    return jsonify({
+        'logs': logs,
+        'stats': {
+            'total': len(logs),
+            'sales': 0,
+            'purchases': 0,
+            'promos': 0,
+            'orders': 0,
+            'users': 0
+        }
+    })
     
-    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
-    
-    # Fonction pour exécuter une requête de comptage
     def run_count_query(extra_condition):
         if extra_condition:
             full_query = f"SELECT COUNT(*) as total FROM user_logs ul{where_clause} AND {extra_condition}"
