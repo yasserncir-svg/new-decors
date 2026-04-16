@@ -7511,8 +7511,8 @@ async function handleRegister() {
 loadCart();
 </script>
 </body>
-</html>'''
-
+</html>
+'''
 HTML_ABOUT = '''
 <!DOCTYPE html>
 <html lang="fr">
