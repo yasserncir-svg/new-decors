@@ -4759,105 +4759,43 @@ function showStockInModal() {
     });
 }
 // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
-let allStockData = [];
-
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
         let response = await fetch('/admin/stock-out');
         let stock = await response.json();
-        allStockData = stock;
         
-        // Date par défaut = aujourd'hui
-        let today = new Date().toISOString().split('T')[0];
+        console.log("Ventes reçues:", stock);
         
+        // Affichage simplifié pour tester
         let html = `
-            <style>
-                @media (max-width: 768px) {
-                    .filters-grid-mobile { display: flex; flex-direction: column; gap: 10px; }
-                    .filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-                    .filter-row > div { flex: 1; min-width: 120px; }
-                    .stats-grid-mobile { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-                    .stat-number-mobile { font-size: 20px !important; }
-                }
-                @media (max-width: 480px) {
-                    .filter-row { flex-direction: column; }
-                    .filter-row > div { width: 100%; }
-                }
-            </style>
-            
             <div class="card">
-                <div class="card-header" style="flex-wrap: wrap;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-    <h2 style="font-size: 18px;"><i class="fas fa-arrow-up"></i> Sorties stock (Ventes)</h2>
-    <button onclick="printStockOut()" style="background: #3498db; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-        <i class="fas fa-print"></i> Imprimer
-    </button>
-</div>
+                <div class="card-header">
+                    <h2>Sorties stock (Ventes)</h2>
                 </div>
-                
-                <div class="filters-bar" style="padding: 15px;">
-                    <div class="filters-grid-mobile">
-                        <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 130px;">
-                                <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date début</label>
-                                <input type="date" id="filterStartDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
-                            </div>
-                            <div style="flex: 1; min-width: 130px;">
-                                <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date fin</label>
-                                <input type="date" id="filterEndDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
-                            </div>
-                            <div style="flex: 1; min-width: 130px;">
-                                <label style="font-size: 12px; display: block; margin-bottom: 5px;">🔄 Type</label>
-                                <select id="filterType" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
-                                    <option value="all">📊 Tous</option>
-                                    <option value="direct">🛒 Vente directe</option>
-                                    <option value="order">📦 Commande en ligne</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                            <div style="flex: 1; min-width: 130px;">
-                                <label style="font-size: 12px; display: block; margin-bottom: 5px;">📆 Période rapide</label>
-                                <select id="filterPeriod" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
-                                    <option value="">🔽 Choisir...</option>
-                                    <option value="today">📅 Aujourd'hui</option>
-                                    <option value="yesterday">📅 Hier</option>
-                                    <option value="week">📅 Cette semaine</option>
-                                    <option value="month">📅 Ce mois</option>
-                                    <option value="lastmonth">📅 Mois dernier</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1; min-width: 100px;">
-                                <label style="font-size: 12px;">&nbsp;</label>
-                                <button class="btn btn-primary" onclick="applyStockFilters()" style="width: 100%; padding: 8px;">
-                                    <i class="fas fa-search"></i> Appliquer
-                                </button>
-                            </div>
-                            <div style="flex: 1; min-width: 100px;">
-                                <label style="font-size: 12px;">&nbsp;</label>
-                                <button class="btn btn-outline" onclick="resetStockFilters()" style="width: 100%; padding: 8px;">
-                                    <i class="fas fa-undo"></i> Reset
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Date</th><th>Produit</th><th>Client</th><th>Quantité</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            ${stock.map(s => `
+                                <tr>
+                                    <td>${s.date ? s.date.split(' ')[0] : '-'}</td>
+                                    <td>${s.product_name || '-'}</td>
+                                    <td>${s.client_name || '-'}</td>
+                                    <td>${s.quantity}</td>
+                                    <td>${(s.total || 0).toFixed(2)} DNT</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 </div>
-                
-                <div id="statsContainer"></div>
-                <div id="stockTableContainer" style="overflow-x: auto;"></div>
             </div>
         `;
+        
         document.getElementById('dynamicContent').innerHTML = html;
-        
-        // Attacher l'événement pour le filtre période
-        document.getElementById('filterPeriod').addEventListener('change', function() {
-            applyQuickPeriod();
-        });
-        
-        // Appliquer le filtre par défaut (aujourd'hui)
-        applyStockFilters();
         
     } catch(e) {
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur: ' + e.message + '</div></div>';
