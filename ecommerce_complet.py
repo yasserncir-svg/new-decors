@@ -40,6 +40,33 @@ if USE_SUPABASE:
 else:
     supabase = None
     print("⚠️ Supabase non configuré, utilisation de SQLite")
+
+# ==================== AJOUTEZ LA FONCTION ICI ====================
+def upload_to_supabase(file, filename):
+    """Upload une image vers Supabase Storage"""
+    if not USE_SUPABASE or not supabase:
+        return None
+    
+    try:
+        # Lire le fichier
+        file.seek(0)
+        file_content = file.read()
+        
+        # Upload vers Supabase Storage
+        supabase.storage.from_('product-images').upload(
+            filename,
+            file_content,
+            {'content-type': 'image/jpeg'}
+        )
+        
+        # Récupérer l'URL publique
+        public_url = supabase.storage.from_('product-images').get_public_url(filename)
+        print(f"✅ Image uploadée vers Supabase: {filename}")
+        return public_url
+    except Exception as e:
+        print(f"❌ Erreur upload vers Supabase: {e}")
+        return None
+
 # ==================== CONFIGURATION BASE DE DONNÉES ====================
 if os.environ.get('RENDER'):
     # Sur Render: utiliser le répertoire local de l'application
@@ -473,8 +500,11 @@ def init_postgres_tables():
 def save_image(file, folder='medium', size=(800, 800)):
     if not file or file.filename == '':
         return None
+    
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
     filename = str(uuid.uuid4()) + '.' + ext
+    
+    # Traitement de l'image
     img = Image.open(file)
     if img.mode in ('RGBA', 'LA', 'P'):
         background = Image.new('RGB', img.size, (255, 255, 255))
@@ -485,8 +515,30 @@ def save_image(file, folder='medium', size=(800, 800)):
     elif img.mode != 'RGB':
         img = img.convert('RGB')
     img.thumbnail(size, Image.Resampling.LANCZOS)
-    img.save(os.path.join(app.config['UPLOAD_FOLDER'], folder, filename), 'JPEG', quality=85)
-    return filename
+    
+    # Si Supabase est configuré, uploader vers Storage
+    if USE_SUPABASE and supabase:
+        # Sauvegarder temporairement
+        temp_path = os.path.join('/tmp', filename)
+        img.save(temp_path, 'JPEG', quality=85)
+        
+        try:
+            # Upload vers Supabase
+            with open(temp_path, 'rb') as f:
+                supabase.storage.from_('product-images').upload(filename, f)
+            os.remove(temp_path)
+            print(f"✅ Image uploadée vers Supabase: {filename}")
+            # Retourner l'URL publique
+            return supabase.storage.from_('product-images').get_public_url(filename)
+        except Exception as e:
+            print(f"❌ Erreur upload Supabase: {e}")
+            # Fallback : sauvegarde locale
+            img.save(os.path.join(app.config['UPLOAD_FOLDER'], folder, filename), 'JPEG', quality=85)
+            return filename
+    else:
+        # Fallback : sauvegarde locale
+        img.save(os.path.join(app.config['UPLOAD_FOLDER'], folder, filename), 'JPEG', quality=85)
+        return filename
 
 def login_required(f):
     @wraps(f)
@@ -7046,7 +7098,6 @@ HTML_PRODUCT_DETAIL = '''
                 </div>
                 {% endif %}
             </div>
-            
             <!-- Product Info -->
             <div class="product-info">
                 <h1>{{ product.name }}</h1>
