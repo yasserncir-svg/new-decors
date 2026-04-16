@@ -13417,6 +13417,8 @@ def admin_clients():
 @app.route('/admin/stats')
 @login_required
 def admin_stats():
+    from datetime import datetime
+    DATABASE_URL = os.environ.get('DATABASE_URL')
     conn = get_db()
     cursor = conn.cursor()
     
@@ -13432,23 +13434,36 @@ def admin_stats():
     
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # ====== CORRECTION : Inclure 'shipped' dans les commandes validées ======
-    # Commandes en ligne du jour (exclure 'cancelled', inclure 'shipped')
-    execute_query(cursor,"""
-        SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-        FROM orders 
-        WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')
-    """, (today + '%',))
+    # Commandes en ligne du jour (PostgreSQL compatible)
+    if DATABASE_URL:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE DATE(date) = %s AND status NOT IN ('cancelled', 'pending')
+        """, (today,))
+    else:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')
+        """, (today + '%',))
     orders_today_data = cursor.fetchone()
     orders_today_count = orders_today_data['count'] or 0
     orders_today_ca = orders_today_data['total'] or 0
     
     # Ventes directes (caisse) du jour
-    execute_query(cursor,"""
-        SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-        FROM stock_out 
-        WHERE sale_type = 'direct' AND date LIKE ?
-    """, (today + '%',))
+    if DATABASE_URL:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM stock_out 
+            WHERE sale_type = 'direct' AND DATE(date) = %s
+        """, (today,))
+    else:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM stock_out 
+            WHERE sale_type = 'direct' AND date LIKE ?
+        """, (today + '%',))
     direct_today_data = cursor.fetchone()
     direct_today_count = direct_today_data['count'] or 0
     direct_today_ca = direct_today_data['total'] or 0
@@ -13457,26 +13472,40 @@ def admin_stats():
     orders_today = orders_today_count + direct_today_count
     ca_jour = orders_today_ca + direct_today_ca
     
-    # CA du mois (exclure les commandes annulées et en attente)
+    # CA du mois
     month_start = datetime.now().replace(day=1).strftime('%Y-%m-%d')
     
-    execute_query(cursor,"""
-        SELECT COALESCE(SUM(total), 0) as total 
-        FROM orders 
-        WHERE date >= ? AND status NOT IN ('cancelled', 'pending')
-    """, (month_start,))
+    if DATABASE_URL:
+        execute_query(cursor,"""
+            SELECT COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE DATE(date) >= %s AND status NOT IN ('cancelled', 'pending')
+        """, (month_start,))
+    else:
+        execute_query(cursor,"""
+            SELECT COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE date >= ? AND status NOT IN ('cancelled', 'pending')
+        """, (month_start,))
     orders_month_ca = cursor.fetchone()['total'] or 0
     
-    execute_query(cursor,"""
-        SELECT COALESCE(SUM(total), 0) as total 
-        FROM stock_out 
-        WHERE sale_type = 'direct' AND date >= ?
-    """, (month_start,))
+    if DATABASE_URL:
+        execute_query(cursor,"""
+            SELECT COALESCE(SUM(total), 0) as total 
+            FROM stock_out 
+            WHERE sale_type = 'direct' AND DATE(date) >= %s
+        """, (month_start,))
+    else:
+        execute_query(cursor,"""
+            SELECT COALESCE(SUM(total), 0) as total 
+            FROM stock_out 
+            WHERE sale_type = 'direct' AND date >= ?
+        """, (month_start,))
     direct_month_ca = cursor.fetchone()['total'] or 0
     
     ca_mois = orders_month_ca + direct_month_ca
     
-    # CA total (exclure les commandes annulées et en attente)
+    # CA total
     execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE status NOT IN ('cancelled', 'pending')")
     orders_total_ca = cursor.fetchone()['total'] or 0
     
