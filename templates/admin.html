@@ -2334,6 +2334,7 @@ async function loadSettings() {
         e.preventDefault();
         await fetch('/admin/settings', { method: 'POST', body: new FormData(e.target) });
         showToast('Paramètres enregistrés');
+        loadSettings();
     };
 }
 // ========== LOGS (HISTORIQUE COMPLET) ==========
