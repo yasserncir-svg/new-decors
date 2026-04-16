@@ -13290,39 +13290,40 @@ def admin_stock_out_save():
     profit = total - (quantity * purchase_price)
     
     # Créer la table tickets si elle n'existe pas
-   DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    # PostgreSQL
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tickets (
-            id SERIAL PRIMARY KEY,
-            numero TEXT UNIQUE NOT NULL,
-            client_name TEXT NOT NULL,
-            client_phone TEXT NOT NULL,
-            client_email TEXT,
-            product_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            price REAL NOT NULL,
-            total REAL NOT NULL,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-else:
-    # SQLite
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            numero TEXT UNIQUE NOT NULL,
-            client_name TEXT NOT NULL,
-            client_phone TEXT NOT NULL,
-            client_email TEXT,
-            product_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            price REAL NOT NULL,
-            total REAL NOT NULL,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')    
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        # PostgreSQL
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tickets (
+                id SERIAL PRIMARY KEY,
+                numero TEXT UNIQUE NOT NULL,
+                client_name TEXT NOT NULL,
+                client_phone TEXT NOT NULL,
+                client_email TEXT,
+                product_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                price REAL NOT NULL,
+                total REAL NOT NULL,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+    else:
+        # SQLite
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero TEXT UNIQUE NOT NULL,
+                client_name TEXT NOT NULL,
+                client_phone TEXT NOT NULL,
+                client_email TEXT,
+                product_name TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                price REAL NOT NULL,
+                total REAL NOT NULL,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+    
     # Générer numéro de ticket
     execute_query(cursor,"SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
@@ -13357,7 +13358,7 @@ else:
     conn.close()
     
     return jsonify({'success': True, 'ticket_number': ticket_num})
-# ==================== API TICKET ====================
+    # ==================== API TICKET ====================
 
 @app.route('/admin/stock-out/last-ticket')
 @login_required
