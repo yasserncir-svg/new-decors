@@ -4765,30 +4765,96 @@ async function loadStockOut() {
     try {
         let response = await fetch('/admin/stock-out');
         let stock = await response.json();
+        allStockData = stock;
         
-        console.log("Ventes reçues:", stock);
+        console.log("Ventes chargées:", stock.length);
         
-        // Affichage simplifié pour tester
+        if (!stock || stock.length === 0) {
+            document.getElementById('dynamicContent').innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-arrow-up"></i> Sorties stock (Ventes)</h2>
+                    </div>
+                    <div class="text-center" style="padding: 40px;">
+                        <p>Aucune vente enregistrée</p>
+                        <a href="/caisse" class="btn btn-primary">➕ Effectuer une vente</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Calculer les totaux
+        let totalQuantity = 0, totalRevenue = 0, totalProfit = 0;
+        for (let i = 0; i < stock.length; i++) {
+            totalQuantity += stock[i].quantity || 0;
+            totalRevenue += stock[i].total || 0;
+            totalProfit += stock[i].profit || 0;
+        }
+        
+        // Construction du tableau HTML
+        let tableRows = '';
+        for (let i = 0; i < stock.length; i++) {
+            let s = stock[i];
+            let dateStr = s.date ? s.date.split(' ')[0] : '-';
+            tableRows += `
+                <tr>
+                    <td style="padding: 10px;">${dateStr}</td>
+                    <td style="padding: 10px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+                    <td style="padding: 10px;">${escapeHtml(s.client_name || '-')}</td>
+                    <td style="padding: 10px;">${s.client_phone || '-'}</td>
+                    <td style="padding: 10px; text-align: center;">${s.quantity}</td>
+                    <td style="padding: 10px; text-align: right; color: #27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
+                    <td style="padding: 10px; text-align: right;">${(s.profit || 0).toFixed(2)} DNT</td>
+                    <td style="padding: 10px;">${s.seller_name || '-'}</td>
+                </tr>
+            `;
+        }
+        
         let html = `
             <div class="card">
                 <div class="card-header">
-                    <h2>Sorties stock (Ventes)</h2>
+                    <h2><i class="fas fa-arrow-up"></i> Sorties stock (Ventes)</h2>
+                    <button onclick="printStockOut()" class="btn btn-primary" style="background:#3498db;color:white;padding:8px 16px;border:none;border-radius:8px;">
+                        <i class="fas fa-print"></i> Imprimer
+                    </button>
                 </div>
-                <div class="table-responsive">
-                    <table class="table">
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800;">${stock.length}</div>
+                        <div>Total ventes</div>
+                    </div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800;">${totalQuantity}</div>
+                        <div>Articles vendus</div>
+                    </div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800; color:#27ae60;">${totalRevenue.toFixed(2)} DNT</div>
+                        <div>Chiffre d'affaires</div>
+                    </div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:center;">
+                        <div style="font-size:24px; font-weight:800;">${totalProfit.toFixed(2)} DNT</div>
+                        <div>Bénéfice</div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table style="width:100%; border-collapse: collapse;">
                         <thead>
-                            <tr><th>Date</th><th>Produit</th><th>Client</th><th>Quantité</th><th>Total</th></tr>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 12px; text-align: left;">Date</th>
+                                <th style="padding: 12px; text-align: left;">Produit</th>
+                                <th style="padding: 12px; text-align: left;">Client</th>
+                                <th style="padding: 12px; text-align: left;">Téléphone</th>
+                                <th style="padding: 12px; text-align: center;">Qté</th>
+                                <th style="padding: 12px; text-align: right;">Total</th>
+                                <th style="padding: 12px; text-align: right;">Bénéfice</th>
+                                <th style="padding: 12px; text-align: left;">Vendeur</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            ${stock.map(s => `
-                                <tr>
-                                    <td>${s.date ? s.date.split(' ')[0] : '-'}</td>
-                                    <td>${s.product_name || '-'}</td>
-                                    <td>${s.client_name || '-'}</td>
-                                    <td>${s.quantity}</td>
-                                    <td>${(s.total || 0).toFixed(2)} DNT</td>
-                                </tr>
-                            `).join('')}
+                            ${tableRows}
                         </tbody>
                     </table>
                 </div>
@@ -4798,6 +4864,7 @@ async function loadStockOut() {
         document.getElementById('dynamicContent').innerHTML = html;
         
     } catch(e) {
+        console.error('Erreur:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur: ' + e.message + '</div></div>';
     }
 }
