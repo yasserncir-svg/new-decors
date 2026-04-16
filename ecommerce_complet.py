@@ -13283,27 +13283,11 @@ def admin_stock_out_save():
     conn = get_db()
     cursor = conn.cursor()
     
-    execute_query(cursor, "SELECT name, prix_achat FROM products WHERE id=?", (product_id,))
+    execute_query(cursor, "SELECT name, prix_achat FROM products WHERE id=%s", (product_id,))
     product = cursor.fetchone()
     product_name = product['name'] if product else 'Produit'
     purchase_price = product['prix_achat'] if product else 0
     profit = total - (quantity * purchase_price)
-    
-    # Créer la table tickets si elle n'existe pas (version compatible)
-    execute_query(cursor, """
-        CREATE TABLE IF NOT EXISTS tickets (
-            id SERIAL PRIMARY KEY,
-            numero TEXT UNIQUE NOT NULL,
-            client_name TEXT NOT NULL,
-            client_phone TEXT NOT NULL,
-            client_email TEXT,
-            product_name TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            price REAL NOT NULL,
-            total REAL NOT NULL,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
     
     # Générer numéro de ticket
     execute_query(cursor, "SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
@@ -15055,11 +15039,22 @@ def init_db_if_needed():
         print("✅ Base de données déjà existante")
 
 # Pour Render (Gunicorn) - s'exécute au démarrage
+# Pour Render (Gunicorn) - s'exécute au démarrage
 if os.environ.get('RENDER'):
     print("🚀 Démarrage sur Render...")
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if DATABASE_URL:
-        init_postgres_tables()
+        # Vérifier si les tables existent déjà
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT 1 FROM users LIMIT 1")
+            print("✅ Tables PostgreSQL déjà existantes")
+        except:
+            print("📦 Création des tables PostgreSQL...")
+            init_postgres_tables()
+        finally:
+            conn.close()
         print("✅ PostgreSQL prêt")
     else:
         init_db_if_needed()
@@ -15067,8 +15062,11 @@ if os.environ.get('RENDER'):
         print("✅ SQLite prêt")
 
 if __name__ == '__main__':
-    init_db_if_needed()
-    migrate_orders()
+    # Éviter de réinitialiser la base au démarrage local si elle existe déjà
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if not DATABASE_URL:
+        init_db_if_needed()
+        migrate_orders()
     
     # Afficher le chemin de la base de données au démarrage
     print(f"📁 Base de données utilisée: {DATABASE}")
