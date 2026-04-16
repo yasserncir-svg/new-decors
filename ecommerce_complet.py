@@ -4962,14 +4962,26 @@ function applyStockFilters() {
     let filtered = [...allStockData];
     
     if (startDate) {
-        filtered = filtered.filter(s => s.date && s.date.split(' ')[0] >= startDate);
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let dateStr = s.date.split(' ')[0];
+            return dateStr >= startDate;
+        });
     }
     if (endDate) {
-        filtered = filtered.filter(s => s.date && s.date.split(' ')[0] <= endDate);
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let dateStr = s.date.split(' ')[0];
+            return dateStr <= endDate;
+        });
     }
     if (filterType !== 'all') {
         filtered = filtered.filter(s => s.sale_type === filterType);
     }
+    
+    // Ajouter un log pour debug
+    console.log("Données reçues:", allStockData);
+    console.log("Données filtrées:", filtered);
     
     updateStockDisplay(filtered);
 }
