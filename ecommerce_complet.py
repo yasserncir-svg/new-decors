@@ -3733,7 +3733,15 @@ HTML_ADMIN = '''
 let productsData = [], categoriesData = [], subcategoriesData = [], suppliersData = [], promotionsData = [], slidersData = [], teamData = [];
 let currentProductId = null;
 let currentTab = 'dashboard';  // <-- AJOUTER CETTE LIGNE
+let isAdmin = false;
 
+// Récupérer le rôle au chargement
+fetch('/admin/check-role')
+    .then(r => r.json())
+    .then(data => {
+        isAdmin = data.is_admin;
+        console.log("Rôle admin:", isAdmin);
+    });
 // ========== GESTION DES ONGLETS AVEC URL ==========
 // AJOUTER TOUT CE BLOC ICI
 function setActiveTab(tabName, title) {
@@ -4921,6 +4929,12 @@ async function loadStockOut() {
 }
 function updateStockDisplay(data) {
     console.log("updateStockDisplay appelé avec", data.length, "éléments");
+    
+    // Vérifier si l'utilisateur est admin (via une variable globale ou session)
+    // On suppose que isAdmin est défini ailleurs (ex: dans une variable globale)
+    // Alternative: faire un appel fetch à /admin/check-role
+    let isAdmin = window.isAdmin || false;
+    
     let totalQuantity = 0, totalRevenue = 0, totalProfit = 0, onlineCount = 0, directCount = 0;
     for (let i = 0; i < data.length; i++) {
         let s = data[i];
@@ -4946,6 +4960,11 @@ function updateStockDisplay(data) {
                 <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${totalRevenue.toFixed(2)} DNT</div>
                 <div style="font-size: 12px;">CA total</div>
             </div>
+    `;
+    
+    // Ajouter bénéfice et marge seulement pour l'admin
+    if (isAdmin) {
+        statsHtml += `
             <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
                 <div class="stat-number" style="font-size: 24px; font-weight: 800; color: #27ae60;">${totalProfit.toFixed(2)} DNT</div>
                 <div style="font-size: 12px;">Bénéfice</div>
@@ -4954,8 +4973,10 @@ function updateStockDisplay(data) {
                 <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${avgMargin}%</div>
                 <div style="font-size: 12px;">Marge</div>
             </div>
-        </div>
-    `;
+        `;
+    }
+    
+    statsHtml += `</div>`;
     document.getElementById('statsContainer').innerHTML = statsHtml;
     
     if (data.length === 0) {
@@ -4974,8 +4995,14 @@ function updateStockDisplay(data) {
                         <th style="padding: 10px 8px; text-align: left;">Client</th>
                         <th style="padding: 10px 8px; text-align: center;">Qté</th>
                         <th style="padding: 10px 8px; text-align: right;">Total</th>
-                        <th style="padding: 10px 8px; text-align: right;">Bénéfice</th>
-                        <th style="padding: 10px 8px; text-align: left;">Vendeur</th>
+    `;
+    
+    // Ajouter colonne bénéfice seulement pour l'admin
+    if (isAdmin) {
+        tableHtml += `<th style="padding: 10px 8px; text-align: right;">Bénéfice</th>`;
+    }
+    
+    tableHtml += `<th style="padding: 10px 8px; text-align: left;">Vendeur</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -4996,8 +5023,15 @@ function updateStockDisplay(data) {
                 <td style="padding: 10px 8px;">${escapeHtml(s.client_name || '-')}<br><small style="color:#999;">${s.client_phone || ''}</small></td>
                 <td style="padding: 10px 8px; text-align: center;">${s.quantity}</td>
                 <td style="padding: 10px 8px; text-align: right; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
-                <td style="padding: 10px 8px; text-align: right; ${(s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;'}">${(s.profit || 0).toFixed(2)} DNT</td>
-                <td style="padding: 10px 8px;">${s.seller_name || '-'}</td>
+        `;
+        
+        // Ajouter bénéfice seulement pour l'admin
+        if (isAdmin) {
+            let profitClass = (s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;';
+            tableHtml += `<td style="padding: 10px 8px; text-align: right; ${profitClass}">${(s.profit || 0).toFixed(2)} DNT</td>`;
+        }
+        
+        tableHtml += `<td style="padding: 10px 8px;">${s.seller_name || '-'}</td>
             </tr>
         `;
     }
@@ -5859,7 +5893,9 @@ async function loadDashboard() {
     try {
         let stats = await fetch('/admin/stats').then(r => r.json());
         let orders = await fetch('/admin/orders?limit=5').then(r => r.json());
-        document.getElementById('dynamicContent').innerHTML = `
+        
+        // Construction dynamique des stats selon le rôle
+        let statsHtml = `
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-number">${stats.products || 0}</div><div>Produits</div></div>
                 <div class="stat-card"><div class="stat-number">${stats.stock_total || 0}</div><div>Stock total</div></div>
@@ -5868,11 +5904,22 @@ async function loadDashboard() {
                 <div class="stat-card"><div class="stat-number">${(stats.ca_jour || 0).toFixed(2)} DNT</div><div>CA jour</div></div>
                 <div class="stat-card"><div class="stat-number">${(stats.ca_mois || 0).toFixed(2)} DNT</div><div>CA mois</div></div>
                 <div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>
-                <div class="stat-card"><div class="stat-number text-success">${(stats.profit_total || 0).toFixed(2)} DNT</div><div>Bénéfice total</div></div>
-            </div>
-            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date.split(' ')[0]}</td></tr>`).join('')}</tbody></table></div></div>
         `;
-    } catch(e) { document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; }
+        
+        // Afficher le bénéfice seulement si l'utilisateur est admin
+        if (stats.is_admin === true) {
+            statsHtml += `<div class="stat-card"><div class="stat-number text-success">${(stats.profit_total || 0).toFixed(2)} DNT</div><div>Bénéfice total</div></div>`;
+        }
+        
+        statsHtml += `</div>`;
+        
+        document.getElementById('dynamicContent').innerHTML = statsHtml + `
+            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
+        `;
+    } catch(e) { 
+        console.error('Erreur dashboard:', e);
+        document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
+    }
 }
 // Gestion sidebar mobile
 document.addEventListener('click', function(e) {
