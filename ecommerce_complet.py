@@ -8061,28 +8061,36 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    execute_query(cursor, query, params)
+    # Exécuter avec les paramètres
+    if params:
+        execute_query(cursor, query, params)
+    else:
+        execute_query(cursor, query)
     logs = cursor.fetchall()
     
-    # ========== STATISTIQUES AVEC FILTRES ==========
-    filter_query = " WHERE 1=1"
+    # ========== STATISTIQUES ==========
+    # Construire les conditions WHERE
+    conditions = []
     filter_params = []
     
     if start_date:
-        filter_query += " AND date(ul.date) >= %s"
+        conditions.append("date(ul.date) >= %s")
         filter_params.append(start_date)
     if end_date:
-        filter_query += " AND date(ul.date) <= %s"
+        conditions.append("date(ul.date) <= %s")
         filter_params.append(end_date)
     if user_id and user_id != 'all':
-        filter_query += " AND ul.user_id = %s"
+        conditions.append("ul.user_id = %s")
         filter_params.append(user_id)
     
-    # Fonction helper pour éviter la répétition
-    def get_count(extra_condition):
-        full_query = f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}"
+    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+    
+    # Fonction pour exécuter une requête de comptage
+    def run_count_query(extra_condition):
         if extra_condition:
-            full_query += f" AND {extra_condition}"
+            full_query = f"SELECT COUNT(*) as total FROM user_logs ul{where_clause} AND {extra_condition}"
+        else:
+            full_query = f"SELECT COUNT(*) as total FROM user_logs ul{where_clause}"
         
         if filter_params:
             execute_query(cursor, full_query, filter_params)
@@ -8090,12 +8098,12 @@ def admin_logs():
             execute_query(cursor, full_query)
         return cursor.fetchone()['total']
     
-    total = get_count("")
-    sales = get_count("(ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
-    purchases = get_count("(ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')")
-    promos = get_count("ul.action LIKE '%promo%'")
-    orders = get_count("(ul.action LIKE '%commande%' OR ul.action LIKE '%order%')")
-    users_count = get_count("(ul.action LIKE '%login%' OR ul.action LIKE '%logout%')")
+    total = run_count_query("")
+    sales = run_count_query("(ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
+    purchases = run_count_query("(ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')")
+    promos = run_count_query("ul.action LIKE '%promo%'")
+    orders = run_count_query("(ul.action LIKE '%commande%' OR ul.action LIKE '%order%')")
+    users_count = run_count_query("(ul.action LIKE '%login%' OR ul.action LIKE '%logout%')")
     
     conn.close()
     
