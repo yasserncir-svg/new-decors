@@ -4963,52 +4963,43 @@ function applyStockFilters() {
     let endDate = document.getElementById('filterEndDate').value;
     let filterType = document.getElementById('filterType').value;
     
-    console.log("=== APPLY FILTERS ===");
-    console.log("startDate:", startDate);
-    console.log("endDate:", endDate);
-    console.log("filterType:", filterType);
-    console.log("allStockData length:", allStockData.length);
-    
-    // Afficher un exemple de date
-    if (allStockData.length > 0) {
-        console.log("Exemple date brute:", allStockData[0].date);
-        console.log("Exemple date formatée:", allStockData[0].date ? allStockData[0].date.split(' ')[0] : 'pas de date');
-    }
-    
     let filtered = [...allStockData];
     
-    // Filtre par date de début
+    // Fonction pour extraire la date au format YYYY-MM-DD
+    function extractDate(dateStr) {
+        if (!dateStr) return '';
+        // Essaie de parser différents formats
+        let d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+        }
+        return '';
+    }
+    
     if (startDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            // Extraire la date (gère les formats PostgreSQL)
-            let dateStr = s.date.split('T')[0].split(' ')[0];
-            return dateStr >= startDate;
+            let itemDate = extractDate(s.date);
+            return itemDate >= startDate;
         });
-        console.log("Après filtre date début:", filtered.length);
     }
     
-    // Filtre par date de fin
     if (endDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            let dateStr = s.date.split('T')[0].split(' ')[0];
-            return dateStr <= endDate;
+            let itemDate = extractDate(s.date);
+            return itemDate <= endDate;
         });
-        console.log("Après filtre date fin:", filtered.length);
     }
     
-    // Filtre par type
-    if (filterType && filterType !== 'all') {
+    if (filterType !== 'all') {
         filtered = filtered.filter(s => s.sale_type === filterType);
-        console.log("Après filtre type:", filtered.length);
     }
     
-    console.log("Données filtrées finales:", filtered.length);
+    console.log("Données filtrées:", filtered.length);
     
     updateStockDisplay(filtered);
 }
-
 function resetStockFilters() {
     let today = new Date().toISOString().split('T')[0];
     document.getElementById('filterStartDate').value = today;
