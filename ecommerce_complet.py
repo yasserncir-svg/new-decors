@@ -13290,7 +13290,26 @@ def admin_stock_out_save():
     profit = total - (quantity * purchase_price)
     
     # Créer la table tickets si elle n'existe pas
-    execute_query(cursor,'''
+   DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # PostgreSQL
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tickets (
+            id SERIAL PRIMARY KEY,
+            numero TEXT UNIQUE NOT NULL,
+            client_name TEXT NOT NULL,
+            client_phone TEXT NOT NULL,
+            client_email TEXT,
+            product_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL,
+            price REAL NOT NULL,
+            total REAL NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+else:
+    # SQLite
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero TEXT UNIQUE NOT NULL,
@@ -13303,8 +13322,7 @@ def admin_stock_out_save():
             total REAL NOT NULL,
             date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    ''')
-    
+    ''')    
     # Générer numéro de ticket
     execute_query(cursor,"SELECT numero FROM tickets ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
@@ -14838,7 +14856,7 @@ def admin_logs():
     
     query += " ORDER BY ul.date DESC LIMIT 500"
     
-    execute_query(cursor,query, params)
+    execute_query(cursor, query, params)
     logs = cursor.fetchall()
     
     # ========== STATISTIQUES AVEC FILTRES ==========
@@ -14857,29 +14875,46 @@ def admin_logs():
         filter_params.append(user_id)
     
     # Total
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}", filter_params)
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}")
     total = cursor.fetchone()['total']
     
     # Ventes
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')", filter_params)
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
     sales = cursor.fetchone()['total']
     
     # Achats
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')", filter_params)
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')")
     purchases = cursor.fetchone()['total']
     
     # Promotions
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'", filter_params)
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'")
     promos = cursor.fetchone()['total']
     
-    # Commandes (inclure commande et commande_status)
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')", filter_params)
+    # Commandes
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')")
     orders = cursor.fetchone()['total']
     
     # Connexions
-    execute_query(cursor,f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')", filter_params)
+    if filter_params:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')", filter_params)
+    else:
+        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')")
     users_count = cursor.fetchone()['total']
-    # ===============================================
     
     conn.close()
     
