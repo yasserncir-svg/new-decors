@@ -8029,7 +8029,7 @@ def admin_logs():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Utiliser la table user_logs avec jointure pour avoir le nom d'utilisateur
+    # Requête principale
     query = """
         SELECT 
             ul.id,
@@ -8047,16 +8047,16 @@ def admin_logs():
     params = []
     
     if start_date:
-        query += " AND date(ul.date) >= ?"
+        query += " AND date(ul.date) >= %s"
         params.append(start_date)
     if end_date:
-        query += " AND date(ul.date) <= ?"
+        query += " AND date(ul.date) <= %s"
         params.append(end_date)
     if user_id and user_id != 'all':
-        query += " AND ul.user_id = ?"
+        query += " AND ul.user_id = %s"
         params.append(user_id)
     if action_type and action_type != 'all':
-        query += " AND ul.action LIKE ?"
+        query += " AND ul.action LIKE %s"
         params.append(f"%{action_type}%")
     
     query += " ORDER BY ul.date DESC LIMIT 500"
@@ -8065,61 +8065,37 @@ def admin_logs():
     logs = cursor.fetchall()
     
     # ========== STATISTIQUES AVEC FILTRES ==========
-    # Appliquer les mêmes filtres que pour les logs
     filter_query = " WHERE 1=1"
     filter_params = []
     
     if start_date:
-        filter_query += " AND date(ul.date) >= ?"
+        filter_query += " AND date(ul.date) >= %s"
         filter_params.append(start_date)
     if end_date:
-        filter_query += " AND date(ul.date) <= ?"
+        filter_query += " AND date(ul.date) <= %s"
         filter_params.append(end_date)
     if user_id and user_id != 'all':
-        filter_query += " AND ul.user_id = ?"
+        filter_query += " AND ul.user_id = %s"
         filter_params.append(user_id)
     
-    # Total
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}")
-    total = cursor.fetchone()['total']
+    # Fonction helper pour éviter la répétition
+    def get_count(extra_condition):
+        full_query = f"SELECT COUNT(*) as total FROM user_logs ul{filter_query}"
+        if extra_condition:
+            full_query += f" AND {extra_condition}"
+        
+        if filter_params:
+            execute_query(cursor, full_query, filter_params)
+        else:
+            execute_query(cursor, full_query)
+        return cursor.fetchone()['total']
     
-    # Ventes
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
-    sales = cursor.fetchone()['total']
-    
-    # Achats
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')")
-    purchases = cursor.fetchone()['total']
-    
-    # Promotions
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND ul.action LIKE '%promo%'")
-    promos = cursor.fetchone()['total']
-    
-    # Commandes
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%commande%' OR ul.action LIKE '%order%')")
-    orders = cursor.fetchone()['total']
-    
-    # Connexions
-    if filter_params:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')", filter_params)
-    else:
-        execute_query(cursor, f"SELECT COUNT(*) as total FROM user_logs ul{filter_query} AND (ul.action LIKE '%login%' OR ul.action LIKE '%logout%')")
-    users_count = cursor.fetchone()['total']
+    total = get_count("")
+    sales = get_count("(ul.action LIKE '%vente%' OR ul.action LIKE '%sale%')")
+    purchases = get_count("(ul.action LIKE '%achat%' OR ul.action LIKE '%purchase%' OR ul.action LIKE '%stock-in%')")
+    promos = get_count("ul.action LIKE '%promo%'")
+    orders = get_count("(ul.action LIKE '%commande%' OR ul.action LIKE '%order%')")
+    users_count = get_count("(ul.action LIKE '%login%' OR ul.action LIKE '%logout%')")
     
     conn.close()
     
