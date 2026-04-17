@@ -5612,7 +5612,10 @@ def admin():
     if session.get('role') == 'client':
         return redirect(url_for('index'))
     
-    return render_template('admin.html')
+    # Récupérer le nom complet ou le nom d'utilisateur
+    username = session.get('fullname') or session.get('username', 'Administrateur')
+    
+    return render_template('admin.html', username=username)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -5686,9 +5689,9 @@ def login():
             
             # Rediriger selon le rôle
             if user['role'] == 'admin':
-                return redirect(url_for('admin'))
+                return redirect(url_for('admin') + '?tab=dashboard')
             elif user['role'] == 'vendeur':
-                return redirect(url_for('admin'))
+                return redirect(url_for('admin') + '?tab=dashboard')
             else:
                 return redirect(url_for('index'))
         else:
