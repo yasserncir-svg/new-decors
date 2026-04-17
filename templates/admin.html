@@ -1068,9 +1068,16 @@ function editProduct(id) { showProductModal(productsData.find(p => p.id === id))
 
 async function deleteProduct(id) {
     if (confirm('Supprimer ce produit ?')) {
-        await fetch(`/admin/product/${id}`, { method: 'DELETE' });
-        loadProducts();
-        showToast('Produit supprimé');
+        let response = await fetch(`/admin/product/${id}`, { method: 'DELETE' });
+        let result = await response.json();
+        
+        if (result.success) {
+            loadProducts();
+            showToast('✅ Produit supprimé avec succès', 'success');
+        } else {
+            // Afficher l'erreur retournée par l'API
+            showToast('❌ ' + result.error, 'error');
+        }
     }
 }
 async function toggleProductActive(productId, currentActive) {
