@@ -5609,7 +5609,6 @@ def index():
 @app.route('/admin')
 @login_required
 def admin():
-    # Une seule ligne suffit
     if session.get('role') == 'client':
         return redirect(url_for('index'))
     
@@ -5708,6 +5707,88 @@ def uploaded_file(filename):
 @app.route('/uploads/medium/<filename>')
 def uploaded_medium(filename):
     return send_from_directory('static/uploads/medium', filename)
+
+@app.route('/admin/stats/filtered', methods=['POST'])
+@login_required
+def admin_stats_filtered():
+    from datetime import datetime
+    data = request.json
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    user_role = session.get('role')
+    is_admin = (user_role == 'admin')
+    
+    # Produits (pas de filtre)
+    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE active=1")
+    products = cursor.fetchone()['count']
+    
+    execute_query(cursor,"SELECT SUM(stock) as total FROM products WHERE active=1")
+    row = cursor.fetchone()
+    stock_total = row['total'] or 0 if row else 0
+    
+    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE stock <= stock_min AND active=1")
+    alert_products = cursor.fetchone()['count']
+    
+    # Commandes sur la période
+    if DATABASE_URL:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE DATE(date) BETWEEN %s AND %s AND status NOT IN ('cancelled', 'pending')
+        """, (start_date, end_date))
+    else:
+        execute_query(cursor,"""
+            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
+            FROM orders 
+            WHERE date BETWEEN ? AND ? AND status NOT IN ('cancelled', 'pending')
+        """, (start_date + ' 00:00:00', end_date + ' 23:59:59'))
+    period_data = cursor.fetchone()
+    orders_count = period_data['count'] or 0
+    ca_period = period_data['total'] or 0
+    
+    # CA total
+    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE status NOT IN ('cancelled', 'pending')")
+    orders_total_ca = cursor.fetchone()['total'] or 0
+    
+    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM stock_out WHERE sale_type = 'direct'")
+    direct_total_ca = cursor.fetchone()['total'] or 0
+    
+    ca_total = orders_total_ca + direct_total_ca
+    
+    # Bénéfice sur la période
+    profit_period = 0
+    if is_admin:
+        if DATABASE_URL:
+            execute_query(cursor,"""
+                SELECT COALESCE(SUM(profit), 0) as total 
+                FROM stock_out 
+                WHERE DATE(date) BETWEEN %s AND %s
+            """, (start_date, end_date))
+        else:
+            execute_query(cursor,"""
+                SELECT COALESCE(SUM(profit), 0) as total 
+                FROM stock_out 
+                WHERE date BETWEEN ? AND ?
+            """, (start_date + ' 00:00:00', end_date + ' 23:59:59'))
+        profit_period = cursor.fetchone()['total'] or 0
+    
+    conn.close()
+    
+    return jsonify({
+        'products': products,
+        'stock_total': stock_total,
+        'alert_products': alert_products,
+        'orders_count': orders_count,
+        'ca_period': ca_period,
+        'ca_total': ca_total,
+        'profit_period': profit_period,
+        'is_admin': is_admin
+    })
 
 # ==================== API PRODUITS ====================
 
@@ -8305,8 +8386,6 @@ def init_db_if_needed():
         print("✅ Base de données créée avec succès")
     else:
         print("✅ Base de données déjà existante")
-
-# Pour Render (Gunicorn) - s'exécute au démarrage
 # Pour Render (Gunicorn) - s'exécute au démarrage
 if os.environ.get('RENDER'):
     print("🚀 Démarrage sur Render...")
