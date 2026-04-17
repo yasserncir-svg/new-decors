@@ -2993,6 +2993,20 @@ function resetDashboardDates() {
     document.getElementById('dashboardEndDate').value = today;
     applyDashboardFilters();
 }
+// Fermeture du menu mobile quand on clique en dehors
+document.addEventListener('click', function(event) {
+    if (window.innerWidth <= 992) {
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.querySelector('.menu-toggle-btn');
+        
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnToggle = menuToggle && menuToggle.contains(event.target);
+        
+        if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
+    }
+});    
 </script>
 </body>
 </html>
