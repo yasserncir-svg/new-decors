@@ -2319,22 +2319,35 @@ async function loadSettings() {
     let settings = await fetch('/admin/settings').then(r => r.json());
     document.getElementById('dynamicContent').innerHTML = `
         <div class="card"><div class="card-header"><h2>⚙️ Paramètres</h2></div>
-        <form id="settingsForm"><div class="form-group"><label>Nom du site</label><input type="text" name="site_name" value="${settings.site_name || ''}"></div>
-        <div class="form-group"><label>Description</label><textarea name="site_description" rows="2">${settings.site_description || ''}</textarea></div>
-        <div class="form-group"><label>Téléphone</label><input type="text" name="contact_phone" value="${settings.contact_phone || ''}"></div>
-        <div class="form-group"><label>Email</label><input type="email" name="contact_email" value="${settings.contact_email || ''}"></div>
-        <div class="form-group"><label>Adresse</label><textarea name="contact_address" rows="2">${settings.contact_address || ''}</textarea></div>
-        <div class="form-group"><label>À propos</label><textarea name="about_text" rows="4">${settings.about_text || ''}</textarea></div>
-        <div class="form-group"><label>Horaires Lundi-Vendredi</label><input type="text" name="hours_monday_friday" value="${settings.hours_monday_friday || '9h - 18h'}"></div>
-        <div class="form-group"><label>Horaires Samedi</label><input type="text" name="hours_saturday" value="${settings.hours_saturday || '10h - 16h'}"></div>
-        <div class="form-group"><label>Horaires Dimanche</label><input type="text" name="hours_sunday" value="${settings.hours_sunday || 'Fermé'}"></div>
-        <button type="submit" class="btn btn-success">💾 Enregistrer</button></form>
+        <form id="settingsForm">
+            <div class="form-group"><label>Nom du site</label><input type="text" name="site_name" value="${settings.site_name || ''}" class="form-control"></div>
+            <div class="form-group"><label>Description</label><textarea name="site_description" rows="2" class="form-control">${settings.site_description || ''}</textarea></div>
+            <div class="form-group"><label>Téléphone</label><input type="text" name="contact_phone" value="${settings.contact_phone || ''}" class="form-control"></div>
+            <div class="form-group"><label>Email</label><input type="email" name="contact_email" value="${settings.contact_email || ''}" class="form-control"></div>
+            <div class="form-group"><label>Adresse</label><textarea name="contact_address" rows="2" class="form-control">${settings.contact_address || ''}</textarea></div>
+            <div class="form-group"><label>À propos</label><textarea name="about_text" rows="4" class="form-control">${settings.about_text || ''}</textarea></div>
+            <div class="form-group"><label>Horaires Lundi-Vendredi</label><input type="text" name="hours_monday_friday" value="${settings.hours_monday_friday || '9h - 18h'}" class="form-control"></div>
+            <div class="form-group"><label>Horaires Samedi</label><input type="text" name="hours_saturday" value="${settings.hours_saturday || '10h - 16h'}" class="form-control"></div>
+            <div class="form-group"><label>Horaires Dimanche</label><input type="text" name="hours_sunday" value="${settings.hours_sunday || 'Fermé'}" class="form-control"></div>
+            <button type="submit" class="btn btn-success">💾 Enregistrer</button>
+        </form>
     `;
+    
     document.getElementById('settingsForm').onsubmit = async (e) => {
         e.preventDefault();
-        await fetch('/admin/settings', { method: 'POST', body: new FormData(e.target) });
-        showToast('Paramètres enregistrés');
-        loadSettings();
+        let formData = new FormData(e.target);
+        let response = await fetch('/admin/settings', { method: 'POST', body: formData });
+        let result = await response.json();
+        
+        if (result.success) {
+            showToast('Paramètres enregistrés', 'success');
+            // Recharger les paramètres après 500ms
+            setTimeout(() => {
+                loadSettings();
+            }, 500);
+        } else {
+            showToast('Erreur lors de l\'enregistrement', 'error');
+        }
     };
 }
 // ========== LOGS (HISTORIQUE COMPLET) ==========
