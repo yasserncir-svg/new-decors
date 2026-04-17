@@ -2588,30 +2588,30 @@ async function loadLogsData() {
         
         // Afficher les stats
         let statsHtml = `
-            <div class="logs-stats">
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.total || 0}</div>
-                    <div>Total actions</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 20px; font-weight: 800;">${data.stats.total || 0}</div>
+                    <div style="font-size: 11px;">Total</div>
                 </div>
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.sales || 0}</div>
-                    <div>💰 Ventes</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: 800;">${data.stats.sales || 0}</div>
+                    <div style="font-size: 11px;">💰 Ventes</div>
                 </div>
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.purchases || 0}</div>
-                    <div>📦 Achats</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: 800;">${data.stats.purchases || 0}</div>
+                    <div style="font-size: 11px;">📦 Achats</div>
                 </div>
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.promos || 0}</div>
-                    <div>🏷️ Promotions</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: 800;">${data.stats.orders || 0}</div>
+                    <div style="font-size: 11px;">📋 Commandes</div>
                 </div>
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.orders || 0}</div>
-                    <div>📋 Commandes</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: 800;">${data.stats.users || 0}</div>
+                    <div style="font-size: 11px;">👤 Connexions</div>
                 </div>
-                <div class="log-stat-card">
-                    <div class="log-stat-number">${data.stats.users || 0}</div>
-                    <div>👤 Connexions</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: 800;">${data.stats.promos || 0}</div>
+                    <div style="font-size: 11px;">🏷️ Promos</div>
                 </div>
             </div>
         `;
@@ -2622,51 +2622,101 @@ async function loadLogsData() {
             return;
         }
         
-        let tableHtml = `
-            <div class="table-responsive">
-                <table class="logs-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Utilisateur</th>
-                            <th>Action</th>
-                            <th>IP</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        // Version mobile : cartes au lieu de tableau
+        let isMobile = window.innerWidth <= 768;
         
-        for (let log of data.logs) {
-            let dateStr = log.created_at ? log.created_at.split(' ')[0] : '-';
-            let timeStr = log.created_at && log.created_at.split(' ')[1] ? log.created_at.split(' ')[1].substring(0, 8) : '';
+        if (isMobile) {
+            // Affichage en cartes pour mobile
+            let cardsHtml = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+            
+            for (let log of data.logs) {
+                let dateStr = log.created_at ? log.created_at.split(' ')[0] : '-';
+                let timeStr = log.created_at && log.created_at.split(' ')[1] ? log.created_at.split(' ')[1].substring(0, 8) : '';
+                
+                // Déterminer la couleur selon le type d'action
+                let actionClass = '';
+                if (log.action && (log.action.includes('vente') || log.action.includes('sale'))) actionClass = 'background: #e8f5e9; color: #2e7d32;';
+                else if (log.action && (log.action.includes('achat') || log.action.includes('purchase'))) actionClass = 'background: #e3f2fd; color: #1565c0;';
+                else if (log.action && log.action.includes('login')) actionClass = 'background: #e8eaf6; color: #283593;';
+                else if (log.action && log.action.includes('promo')) actionClass = 'background: #fff3e0; color: #e65100;';
+                else actionClass = 'background: #f5f5f5; color: #666;';
+                
+                cardsHtml += `
+                    <div style="background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: #666;">
+                                <i class="fas fa-calendar"></i> ${dateStr} <strong>${timeStr}</strong>
+                            </div>
+                            <div style="${actionClass} padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600;">
+                                ${log.action ? log.action.substring(0, 30) : '-'}
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 14px;">
+                                    <i class="fas fa-user"></i> ${escapeHtml(log.username || 'Système')}
+                                </div>
+                                <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                                    <i class="fas fa-network-wired"></i> ${log.ip_address || '-'}
+                                </div>
+                            </div>
+                            <div style="font-size: 20px; color: #FF69B4;">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            cardsHtml += `</div>`;
+            document.getElementById('logsTable').innerHTML = cardsHtml;
+            
+        } else {
+            // Affichage en tableau pour desktop
+            let tableHtml = `
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px;">
+                        <thead>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 10px; text-align: left;">Date</th>
+                                <th style="padding: 10px; text-align: left;">Utilisateur</th>
+                                <th style="padding: 10px; text-align: left;">Action</th>
+                                <th style="padding: 10px; text-align: left;">IP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            for (let log of data.logs) {
+                let dateStr = log.created_at ? log.created_at.split(' ')[0] : '-';
+                let timeStr = log.created_at && log.created_at.split(' ')[1] ? log.created_at.split(' ')[1].substring(0, 8) : '';
+                
+                tableHtml += `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; white-space: nowrap;">
+                            <strong>${dateStr}</strong><br>
+                            <small>${timeStr}</small>
+                        </td>
+                        <td style="padding: 10px;"><strong>${escapeHtml(log.username || 'Système')}</strong></td>
+                        <td style="padding: 10px;">${escapeHtml(log.action || '-')}</td>
+                        <td style="padding: 10px;"><small>${log.ip_address || '-'}</small></td>
+                    </tr>
+                `;
+            }
             
             tableHtml += `
-                <tr>
-                    <td style="white-space: nowrap;">
-                        <strong>${dateStr}</strong><br>
-                        <small>${timeStr}</small>
-                    </td>
-                    <td><strong>${escapeHtml(log.username || 'Système')}</strong></td>
-                    <td>${escapeHtml(log.action)}</small></td>
-                    <td><small>${log.ip_address || '-'}</small></td>
-                </tr>
+                        </tbody>
+                    </table>
+                </div>
             `;
+            document.getElementById('logsTable').innerHTML = tableHtml;
         }
-        
-        tableHtml += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        document.getElementById('logsTable').innerHTML = tableHtml;
         
     } catch(e) {
         console.error(e);
         document.getElementById('logsTable').innerHTML = '<div class="text-center text-danger">❌ Erreur de chargement</div>';
     }
 }
-
 function applyLogFilters() {
     loadLogsData();
 }
