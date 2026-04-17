@@ -7402,8 +7402,20 @@ def admin_settings():
 def admin_settings_save():
     conn = get_db()
     cursor = conn.cursor()
+    
     for key, value in request.form.items():
-        execute_query(cursor,"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+        # Version compatible PostgreSQL et SQLite
+        if os.environ.get('DATABASE_URL'):
+            # PostgreSQL
+            execute_query(cursor, """
+                INSERT INTO settings (key, value) 
+                VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            """, (key, value))
+        else:
+            # SQLite
+            execute_query(cursor, "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    
     conn.commit()
     conn.close()
     return jsonify({'success': True})
