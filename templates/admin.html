@@ -1671,9 +1671,6 @@ async function loadStockOut() {
 function updateStockDisplay(data) {
     console.log("updateStockDisplay appelé avec", data.length, "éléments");
     
-    // Vérifier si l'utilisateur est admin (via une variable globale ou session)
-    // On suppose que isAdmin est défini ailleurs (ex: dans une variable globale)
-    // Alternative: faire un appel fetch à /admin/check-role
     let isAdmin = window.isAdmin || false;
     
     let totalQuantity = 0, totalRevenue = 0, totalProfit = 0, onlineCount = 0, directCount = 0;
@@ -1687,32 +1684,27 @@ function updateStockDisplay(data) {
     let avgMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0;
     
     let statsHtml = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
-            <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
-                <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${data.length}</div>
-                <div style="font-size: 12px;">Total ventes</div>
-                <small style="font-size: 10px;">📦 ${onlineCount} | 🛒 ${directCount}</small>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 20px; font-weight: 800; color: var(--primary-dark);">${data.length}</div>
+                <div style="font-size: 11px;">Total ventes</div>
+                <small style="font-size: 9px;">📦 ${onlineCount} | 🛒 ${directCount}</small>
             </div>
-            <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
-                <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${totalQuantity}</div>
-                <div style="font-size: 12px;">Articles vendus</div>
+            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 20px; font-weight: 800; color: var(--primary-dark);">${totalQuantity}</div>
+                <div style="font-size: 11px;">Articles vendus</div>
             </div>
-            <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
-                <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${totalRevenue.toFixed(2)} DNT</div>
-                <div style="font-size: 12px;">CA total</div>
+            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 18px; font-weight: 800; color: var(--primary-dark);">${totalRevenue.toFixed(2)} DNT</div>
+                <div style="font-size: 11px;">CA total</div>
             </div>
     `;
     
-    // Ajouter bénéfice et marge seulement pour l'admin
     if (isAdmin) {
         statsHtml += `
-            <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
-                <div class="stat-number" style="font-size: 24px; font-weight: 800; color: #27ae60;">${totalProfit.toFixed(2)} DNT</div>
-                <div style="font-size: 12px;">Bénéfice</div>
-            </div>
-            <div class="stat-card" style="padding: 12px; text-align: center; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-radius: 12px;">
-                <div class="stat-number" style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">${avgMargin}%</div>
-                <div style="font-size: 12px;">Marge</div>
+            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 18px; font-weight: 800; color: #27ae60;">${totalProfit.toFixed(2)} DNT</div>
+                <div style="font-size: 11px;">Bénéfice</div>
             </div>
         `;
     }
@@ -1725,64 +1717,113 @@ function updateStockDisplay(data) {
         return;
     }
     
-    let tableHtml = `
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px;">
-                <thead>
-                    <tr style="background: #f5f5f5;">
-                        <th style="padding: 10px 8px; text-align: left;">Date</th>
-                        <th style="padding: 10px 8px; text-align: left;">Type</th>
-                        <th style="padding: 10px 8px; text-align: left;">Produit</th>
-                        <th style="padding: 10px 8px; text-align: left;">Client</th>
-                        <th style="padding: 10px 8px; text-align: center;">Qté</th>
-                        <th style="padding: 10px 8px; text-align: right;">Total</th>
-    `;
+    // Version mobile : cartes au lieu de tableau
+    let isMobile = window.innerWidth <= 768;
     
-    // Ajouter colonne bénéfice seulement pour l'admin
-    if (isAdmin) {
-        tableHtml += `<th style="padding: 10px 8px; text-align: right;">Bénéfice</th>`;
-    }
-    
-    tableHtml += `<th style="padding: 10px 8px; text-align: left;">Vendeur</th>
+    if (isMobile) {
+        // Affichage en cartes pour mobile
+        let cardsHtml = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+        
+        for (let i = 0; i < data.length; i++) {
+            let s = data[i];
+            let dateStr = s.date ? s.date.split(' ')[0] : '-';
+            let isOnline = (s.sale_type === 'order');
+            let typeLabel = isOnline ? '📦 En ligne' : '🛒 Caisse';
+            let typeColor = isOnline ? '#1565c0' : '#2e7d32';
+            
+            cardsHtml += `
+                <div style="background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; font-size: 14px;">${escapeHtml(s.product_name || '-')}</div>
+                        <div style="background: ${typeColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px;">${typeLabel}</div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
+                            <i class="fas fa-calendar"></i> ${dateStr}
+                        </div>
+                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
+                            <i class="fas fa-user"></i> ${escapeHtml(s.client_name || '-')}
+                        </div>
+                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
+                            <i class="fas fa-phone"></i> ${s.client_phone || '-'}
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 8px;">
+                        <div>
+                            <div style="font-size: 12px; color: #666;">Quantité: ${s.quantity}</div>
+                            <div style="font-size: 12px; color: #666;">Vendeur: ${s.seller_name || '-'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 16px; font-weight: 700; color: #27ae60;">${(s.total || 0).toFixed(2)} DNT</div>
+                            ${isAdmin ? `<div style="font-size: 11px; ${(s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;'}">Bénéfice: ${(s.profit || 0).toFixed(2)} DNT</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        cardsHtml += `</div>`;
+        document.getElementById('stockTableContainer').innerHTML = cardsHtml;
+        
+    } else {
+        // Affichage en tableau pour desktop
+        let tableHtml = `
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px 8px; text-align: left;">Date</th>
+                            <th style="padding: 10px 8px; text-align: left;">Type</th>
+                            <th style="padding: 10px 8px; text-align: left;">Produit</th>
+                            <th style="padding: 10px 8px; text-align: left;">Client</th>
+                            <th style="padding: 10px 8px; text-align: center;">Qté</th>
+                            <th style="padding: 10px 8px; text-align: right;">Total</th>
+        `;
+        
+        if (isAdmin) {
+            tableHtml += `<th style="padding: 10px 8px; text-align: right;">Bénéfice</th>`;
+        }
+        
+        tableHtml += `<th style="padding: 10px 8px; text-align: left;">Vendeur</th>
                     </tr>
                 </thead>
                 <tbody>
-    `;
-    
-    for (let i = 0; i < data.length; i++) {
-        let s = data[i];
-        let dateStr = s.date ? s.date.split(' ')[0] : '-';
-        let isOnline = (s.sale_type === 'order');
-        let typeLabel = isOnline ? '📦 En ligne' : '🛒 Caisse';
-        let typeColor = isOnline ? 'background:#e3f2fd;color:#1565c0;' : 'background:#e8f5e9;color:#2e7d32;';
-        
-        tableHtml += `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 10px 8px;">${dateStr}</td>
-                <td style="padding: 10px 8px;"><span style="${typeColor} padding: 4px 10px; border-radius: 20px; font-size: 11px; display: inline-block;">${typeLabel}</span></td>
-                <td style="padding: 10px 8px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
-                <td style="padding: 10px 8px;">${escapeHtml(s.client_name || '-')}<br><small style="color:#999;">${s.client_phone || ''}</small></td>
-                <td style="padding: 10px 8px; text-align: center;">${s.quantity}</td>
-                <td style="padding: 10px 8px; text-align: right; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
         `;
         
-        // Ajouter bénéfice seulement pour l'admin
-        if (isAdmin) {
-            let profitClass = (s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;';
-            tableHtml += `<td style="padding: 10px 8px; text-align: right; ${profitClass}">${(s.profit || 0).toFixed(2)} DNT</td>`;
+        for (let i = 0; i < data.length; i++) {
+            let s = data[i];
+            let dateStr = s.date ? s.date.split(' ')[0] : '-';
+            let isOnline = (s.sale_type === 'order');
+            let typeLabel = isOnline ? '📦 En ligne' : '🛒 Caisse';
+            let typeColor = isOnline ? 'background:#e3f2fd;color:#1565c0;' : 'background:#e8f5e9;color:#2e7d32;';
+            
+            tableHtml += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px 8px;">${dateStr}</td>
+                    <td style="padding: 10px 8px;"><span style="${typeColor} padding: 4px 10px; border-radius: 20px; font-size: 11px; display: inline-block;">${typeLabel}</span></td>
+                    <td style="padding: 10px 8px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+                    <td style="padding: 10px 8px;">${escapeHtml(s.client_name || '-')}<br><small style="color:#999;">${s.client_phone || ''}</small></td>
+                    <td style="padding: 10px 8px; text-align: center;">${s.quantity}</td>
+                    <td style="padding: 10px 8px; text-align: right; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
+            `;
+            
+            if (isAdmin) {
+                let profitClass = (s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;';
+                tableHtml += `<td style="padding: 10px 8px; text-align: right; ${profitClass}">${(s.profit || 0).toFixed(2)} DNT</td>`;
+            }
+            
+            tableHtml += `<td style="padding: 10px 8px;">${s.seller_name || '-'}</td>
+                </tr>
+            `;
         }
         
-        tableHtml += `<td style="padding: 10px 8px;">${s.seller_name || '-'}</td>
-            </tr>
-        `;
-    }
-    
-    tableHtml += `
+        tableHtml += `
                 </tbody>
             </table>
-        </div>
-    `;
-    document.getElementById('stockTableContainer').innerHTML = tableHtml;
+            </div>
+        `;
+        document.getElementById('stockTableContainer').innerHTML = tableHtml;
+    }
 }
 
 function applyStockFilters() {
