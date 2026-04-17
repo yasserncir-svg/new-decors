@@ -5976,9 +5976,13 @@ def admin_product_save():
 @app.route('/admin/product/<int:product_id>', methods=['DELETE'])
 @login_required
 def admin_product_delete(product_id):
+    # Vérifier que l'utilisateur est admin
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Action réservée à l\'administrateur'}), 403
+    
     conn = get_db()
     cursor = conn.cursor()
-    execute_query(cursor,"DELETE FROM products WHERE id=?", (product_id,))
+    execute_query(cursor, "DELETE FROM products WHERE id=?", (product_id,))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
