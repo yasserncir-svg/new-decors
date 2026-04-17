@@ -2737,11 +2737,45 @@ async function loadDashboard() {
     setActiveTab('dashboard', 'Tableau de bord');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
+        // Date par défaut = aujourd'hui
+        let today = new Date().toISOString().split('T')[0];
+        let currentStartDate = today;
+        let currentEndDate = today;
+        
         let stats = await fetch('/admin/stats').then(r => r.json());
         let orders = await fetch('/admin/orders?limit=5').then(r => r.json());
         
+        // HTML des filtres de date
+        let filtersHtml = `
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Filtres</h3>
+                    <button class="btn btn-sm btn-outline" onclick="resetDashboardDates()" style="padding: 4px 12px;">🔄 Réinitialiser</button>
+                </div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date début</label>
+                        <input type="date" id="dashboardStartDate" class="form-control" value="${currentStartDate}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date fin</label>
+                        <input type="date" id="dashboardEndDate" class="form-control" value="${currentEndDate}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="applyDashboardFilters()" style="padding: 8px 20px;">
+                            <i class="fas fa-search"></i> Appliquer
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <i class="fas fa-info-circle"></i> Période par défaut: aujourd'hui (${today})
+                </div>
+            </div>
+        `;
+        
         // Construction dynamique des stats selon le rôle
         let statsHtml = `
+            ${filtersHtml}
             <div class="stats-grid">
                 <div class="stat-card"><div class="stat-number">${stats.products || 0}</div><div>Produits</div></div>
                 <div class="stat-card"><div class="stat-number">${stats.stock_total || 0}</div><div>Stock total</div></div>
@@ -2760,23 +2794,100 @@ async function loadDashboard() {
         statsHtml += `</div>`;
         
         document.getElementById('dynamicContent').innerHTML = statsHtml + `
-            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
+            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"></td><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
         `;
     } catch(e) { 
         console.error('Erreur dashboard:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
     }
 }
-// Gestion sidebar mobile
-document.addEventListener('click', function(e) {
-    if(window.innerWidth <= 992) {
-        let sidebar = document.getElementById('sidebar');
-        let toggleBtn = document.querySelector('.menu-toggle-btn');
-        if(!sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('open')) {
-            sidebar.classList.remove('open');
-        }
+
+// Fonction pour appliquer les filtres de date sur le dashboard
+async function applyDashboardFilters() {
+    let startDate = document.getElementById('dashboardStartDate').value;
+    let endDate = document.getElementById('dashboardEndDate').value;
+    
+    if (!startDate || !endDate) {
+        showToast('Veuillez sélectionner une période', 'error');
+        return;
     }
-});
+    
+    document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
+    
+    try {
+        // Appeler l'API avec les filtres de date
+        let response = await fetch('/admin/stats/filtered', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start_date: startDate, end_date: endDate })
+        });
+        
+        let stats = await response.json();
+        let orders = await fetch('/admin/orders?limit=5').then(r => r.json());
+        
+        let filtersHtml = `
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Filtres</h3>
+                    <button class="btn btn-sm btn-outline" onclick="resetDashboardDates()" style="padding: 4px 12px;">🔄 Réinitialiser</button>
+                </div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date début</label>
+                        <input type="date" id="dashboardStartDate" class="form-control" value="${startDate}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date fin</label>
+                        <input type="date" id="dashboardEndDate" class="form-control" value="${endDate}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="applyDashboardFilters()" style="padding: 8px 20px;">
+                            <i class="fas fa-search"></i> Appliquer
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <i class="fas fa-info-circle"></i> Période: du ${startDate} au ${endDate}
+                </div>
+            </div>
+        `;
+        
+        let isAdmin = stats.is_admin === true;
+        let statsHtml = `
+            ${filtersHtml}
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-number">${stats.products || 0}</div><div>Produits</div></div>
+                <div class="stat-card"><div class="stat-number">${stats.stock_total || 0}</div><div>Stock total</div></div>
+                <div class="stat-card"><div class="stat-number text-danger">${stats.alert_products || 0}</div><div>Alerte stock</div></div>
+                <div class="stat-card"><div class="stat-number">${stats.orders_count || 0}</div><div>Commandes</div></div>
+                <div class="stat-card"><div class="stat-number">${(stats.ca_period || 0).toFixed(2)} DNT</div><div>CA période</div></div>
+                <div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>
+        `;
+        
+        if (isAdmin) {
+            statsHtml += `<div class="stat-card"><div class="stat-number text-success">${(stats.profit_period || 0).toFixed(2)} DNT</div><div>Bénéfice période</div></div>`;
+        }
+        
+        statsHtml += `</div>`;
+        
+        document.getElementById('dynamicContent').innerHTML = statsHtml + `
+            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
+        `;
+        
+    } catch(e) {
+        console.error('Erreur:', e);
+        showToast('Erreur lors du filtrage', 'error');
+        loadDashboard(); // Recharger le dashboard par défaut
+    }
+}
+
+// Fonction pour réinitialiser les dates (remettre à aujourd'hui)
+function resetDashboardDates() {
+    let today = new Date().toISOString().split('T')[0];
+    document.getElementById('dashboardStartDate').value = today;
+    document.getElementById('dashboardEndDate').value = today;
+    applyDashboardFilters();
+}
 </script>
 </body>
 </html>
