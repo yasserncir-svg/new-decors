@@ -2793,13 +2793,77 @@ async function loadDashboard() {
         
         statsHtml += `</div>`;
         
-        document.getElementById('dynamicContent').innerHTML = statsHtml + `
-            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"></td><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
+        // Générer le tableau des commandes avec formatage des dates
+        let ordersHtml = `
+            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Client</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
+        
+        for (let o of orders) {
+            let formattedDate = formatDate(o.date);
+            ordersHtml += `
+                <tr>
+                    <td><strong>${o.order_number}</strong></td>
+                    <td>${o.client_name}</td>
+                    <td class="text-success">${o.total.toFixed(2)} DNT</td>
+                    <td><span class="status-badge status-${o.status}">${o.status}</span></td>
+                    <td>${formattedDate}</td>
+                </tr>
+            `;
+        }
+        
+        ordersHtml += `
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+        
+        document.getElementById('dynamicContent').innerHTML = statsHtml + ordersHtml;
+        
     } catch(e) { 
         console.error('Erreur dashboard:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
     }
+}
+
+// Fonction pour formater les dates (compatible avec tous les formats)
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    
+    // Si c'est déjà une date au format YYYY-MM-DD
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return dateStr.split(' ')[0];
+    }
+    
+    // Si c'est au format "Thu, 16 Apr 2026 11:27:18 GMT"
+    try {
+        let d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            let year = d.getFullYear();
+            let month = String(d.getMonth() + 1).padStart(2, '0');
+            let day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    } catch(e) {}
+    
+    // Si c'est au format "2026-04-16 11:27:18"
+    if (dateStr.includes(' ')) {
+        return dateStr.split(' ')[0];
+    }
+    
+    // Si tout échoue, retourner les 10 premiers caractères
+    return dateStr.substring(0, 10);
 }
 
 // Fonction pour appliquer les filtres de date sur le dashboard
@@ -2870,9 +2934,43 @@ async function applyDashboardFilters() {
         
         statsHtml += `</div>`;
         
-        document.getElementById('dynamicContent').innerHTML = statsHtml + `
-            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div><div class="table-responsive"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead><tbody>${orders.map(o => `<tr><td><strong>${o.order_number}</strong></td><td>${o.client_name}</td><td class="text-success">${o.total.toFixed(2)} DNT</td><td><span class="status-badge status-${o.status}">${o.status}</span></td><td>${o.date ? o.date.split(' ')[0] : '-'}</td></tr>`).join('')}</tbody></table></div></div>
+        // Générer le tableau des commandes avec formatage des dates
+        let ordersHtml = `
+            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Client</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
+        
+        for (let o of orders) {
+            let formattedDate = formatDate(o.date);
+            ordersHtml += `
+                <tr>
+                    <td><strong>${o.order_number}</strong></td>
+                    <td>${o.client_name}</td>
+                    <td class="text-success">${o.total.toFixed(2)} DNT</td>
+                    <td><span class="status-badge status-${o.status}">${o.status}</span></td>
+                    <td>${formattedDate}</td>
+                </tr>
+            `;
+        }
+        
+        ordersHtml += `
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+        
+        document.getElementById('dynamicContent').innerHTML = statsHtml + ordersHtml;
         
     } catch(e) {
         console.error('Erreur:', e);
