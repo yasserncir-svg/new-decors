@@ -1465,24 +1465,15 @@
     <div class="container">
         <h2 class="section-title">Nos collections</h2>
         <p class="section-subtitle">Des styles variés pour tous les goûts</p>
-        <div class="categories-grid">
+        <div class="categories-grid-modern">
             {% for cat in categories %}
-            <div class="category-card" style="padding: 25px;">
-                <a href="/category/{{ cat.slug }}" style="text-decoration: none; color: inherit;">
-                    <div class="category-icon">{{ cat.icon or '📦' }}</div>
-                    <h3>{{ cat.name }}</h3>
-                    <p>{{ cat.description or 'Découvrez notre collection' }}</p>
-                </a>
-                {% if cat.subcategories and cat.subcategories|length > 0 %}
-                <div class="subcategory-list">
-                    {% for sub in cat.subcategories %}
-                    <a href="/subcategory/{{ sub.slug }}" class="subcategory-item">
-                        <i class="fas fa-angle-right"></i> {{ sub.name }}
-                    </a>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
+            <a href="/category/{{ cat.slug }}" class="category-card-modern">
+                <div class="category-icon-modern">{{ cat.icon or '🎨' }}</div>
+                <h3 class="category-name-modern">{{ cat.name }}</h3>
+                <span class="category-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </span>
+            </a>
             {% endfor %}
         </div>
     </div>
