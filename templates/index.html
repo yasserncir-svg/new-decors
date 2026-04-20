@@ -1826,7 +1826,6 @@ function showToast(msg) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
-
 // ========== MENU MOBILE CORRIGÉ ==========
 function toggleMobileMenu() {
     document.getElementById('navMenu').classList.toggle('active');
@@ -1834,9 +1833,9 @@ function toggleMobileMenu() {
 
 // Gestion des sous-menus sur mobile (à initialiser une seule fois)
 function initMobileSubmenus() {
-    document.querySelectorAll('.nav-item').forEach(item => {
-        const link = item.querySelector('> a');
-        const submenu = item.querySelector('.submenu');
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        var link = item.querySelector('a');  // ← Correction ici
+        var submenu = item.querySelector('.submenu');
         
         if (submenu) {
             // Supprimer les anciens événements pour éviter les doublons
@@ -1850,19 +1849,20 @@ function initMobileSubmenus() {
 function handleSubmenuClick(e) {
     // Vérifier si on est sur mobile
     if (window.innerWidth <= 768) {
-        const parent = this.parentElement;
-        const submenu = parent.querySelector('.submenu');
+        var parent = this.parentElement;
+        var submenu = parent.querySelector('.submenu');
         
         if (submenu) {
             e.preventDefault();
             e.stopPropagation();
             
             // Fermer les autres sous-menus ouverts
-            document.querySelectorAll('.nav-item.active').forEach(item => {
-                if (item !== parent) {
-                    item.classList.remove('active');
+            var activeItems = document.querySelectorAll('.nav-item.active');
+            for (var i = 0; i < activeItems.length; i++) {
+                if (activeItems[i] !== parent) {
+                    activeItems[i].classList.remove('active');
                 }
-            });
+            }
             // Ouvrir/fermer celui-ci
             parent.classList.toggle('active');
         }
@@ -1873,10 +1873,10 @@ function handleSubmenuClick(e) {
 // Réinitialiser quand la fenêtre change de taille
 window.addEventListener('resize', function() {
     if (window.innerWidth > 768) {
-        // Sur desktop, fermer tous les sous-menus
-        document.querySelectorAll('.nav-item.active').forEach(item => {
-            item.classList.remove('active');
-        });
+        var activeItems = document.querySelectorAll('.nav-item.active');
+        for (var i = 0; i < activeItems.length; i++) {
+            activeItems[i].classList.remove('active');
+        }
     }
 });
 
@@ -1986,16 +1986,20 @@ function showSlide(index) {
     if (!slides.length) return;
     if (index < 0) index = slides.length - 1;
     if (index >= slides.length) index = 0;
-    slides.forEach(s => s.classList.remove('active'));
+    for (var i = 0; i < slides.length; i++) {
+        slides[i].classList.remove('active');
+    }
     slides[index].classList.add('active');
     let dots = document.querySelectorAll('.dot');
-    dots.forEach((d,i) => d.classList.toggle('active', i === index));
+    for (var i = 0; i < dots.length; i++) {
+        dots[i].classList.toggle('active', i === index);
+    }
     currentSlide = index;
 }
 function nextSlide() { showSlide(currentSlide + 1); resetAutoSlide(); }
 function prevSlide() { showSlide(currentSlide - 1); resetAutoSlide(); }
 function goToSlide(index) { showSlide(index); resetAutoSlide(); }
-function startAutoSlide() { if (slideInterval) clearInterval(slideInterval); slideInterval = setInterval(() => nextSlide(), 5000); }
+function startAutoSlide() { if (slideInterval) clearInterval(slideInterval); slideInterval = setInterval(function() { nextSlide(); }, 5000); }
 function stopAutoSlide() { if (slideInterval) clearInterval(slideInterval); }
 function resetAutoSlide() { stopAutoSlide(); startAutoSlide(); }
 
@@ -2003,22 +2007,23 @@ function resetAutoSlide() { stopAutoSlide(); startAutoSlide(); }
 document.addEventListener('DOMContentLoaded', function() {
     initSlider();
     loadCart();
-    initMobileSubmenus();  // ← AJOUTER CETTE LIGNE
+    initMobileSubmenus();
     
     // Gestion du clic sur les cartes produits
-    document.querySelectorAll('.product-card').forEach(function(card) {
-        card.addEventListener('click', function(e) {
+    var productCards = document.querySelectorAll('.product-card');
+    for (var i = 0; i < productCards.length; i++) {
+        productCards[i].addEventListener('click', function(e) {
             if (e.target.closest('.add-to-cart-btn') || 
                 e.target.closest('.overlay-btn-cart') || 
                 e.target.closest('.btn-add-cart')) {
                 return;
             }
-            const productLink = card.querySelector('.product-title a, .btn-view');
+            var productLink = this.querySelector('.product-title a, .btn-view');
             if (productLink && productLink.href) {
                 window.location.href = productLink.href;
             }
         });
-    });
+    }
 });
 </script>
 </body>
