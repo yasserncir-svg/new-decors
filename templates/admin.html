@@ -1247,6 +1247,9 @@ async function loadStockIn() {
             totalAmount += stock[i].total || 0;
         }
         
+        // ⚠️ VÉRIFIER LE RÔLE DE L'UTILISATEUR ⚠️
+        let isAdmin = window.userRole === 'admin';  // ou session.role
+        
         let html = `
             <style>
                 .stock-stats-grid {
@@ -1309,6 +1312,9 @@ async function loadStockIn() {
                 }
                 .text-success { color: var(--success); }
                 .text-center { text-align: center; }
+                .admin-only {
+                    display: ${isAdmin ? 'block' : 'none'};
+                }
             </style>
             
             <div class="card">
@@ -1328,10 +1334,13 @@ async function loadStockIn() {
                         <div class="stock-stat-number">${totalQuantity}</div>
                         <div class="stock-stat-label">Articles achetés</div>
                     </div>
+                    <!-- ⚠️ CARTE INVESTISSEMENT - SEULEMENT POUR ADMIN ⚠️ -->
+                    ${isAdmin ? `
                     <div class="stock-stat-card">
                         <div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div>
                         <div class="stock-stat-label">Investissement total</div>
                     </div>
+                    ` : ''}
                     <div class="stock-stat-card">
                         <div class="stock-stat-number">${window.stockSuppliers.length}</div>
                         <div class="stock-stat-label">Fournisseurs actifs</div>
