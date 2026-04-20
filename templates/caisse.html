@@ -367,7 +367,7 @@
     let products = [];
     let cart = [];
     let currentTicketNumber = 'TICKET-001';
-
+    let subcategoriesData = []
     async function loadProducts() {
         try {
             const response = await fetch('/admin/products');
@@ -396,6 +396,28 @@
         document.getElementById('dateTime').innerHTML = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
     }
 
+    let products = [];
+    let cart = [];
+    let currentTicketNumber = 'TICKET-001';
+    let subcategoriesData = [];
+
+    async function loadProducts() {
+        try {
+            const response = await fetch('/admin/products');
+            const data = await response.json();
+            products = data.products || [];
+            
+            // Charger les sous-catégories pour le filtrage
+            const catsResponse = await fetch('/admin/categories');
+            const catsData = await catsResponse.json();
+            subcategoriesData = catsData.subcategories || [];
+            
+            renderProducts();
+        } catch (error) {
+            console.error('Erreur:', error);
+            document.getElementById('productsGrid').innerHTML = '<div style="text-align:center; padding:40px; color:red;">❌ Erreur chargement</div>';
+        }
+    }
     function renderProducts() {
         const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
         const activeCategory = document.querySelector('.category-tab.active')?.dataset.category || 'all';
@@ -409,7 +431,17 @@
             if (!p.active) return false;
             const matchSearch = (p.name && p.name.toLowerCase().includes(searchTerm)) || 
                                (p.reference && p.reference.toLowerCase().includes(searchTerm));
-            const matchCategory = activeCategory === 'all' || p.subcategory_id == activeCategory;
+            
+            let matchCategory = false;
+            if (activeCategory === 'all') {
+                matchCategory = true;
+            } else {
+                const subcat = subcategoriesData.find(s => s.id == p.subcategory_id);
+                if (subcat) {
+                    matchCategory = subcat.category_id == activeCategory;
+                }
+            }
+            
             return matchSearch && matchCategory;
         });
 
@@ -423,10 +455,20 @@
             const price = (p.prix_promo && p.prix_promo > 0) ? p.prix_promo : p.prix_vente;
             const isOutOfStock = p.stock <= 0;
             const onclickAttr = isOutOfStock ? '' : `onclick="addToCart(${p.id}, '${(p.name || '').replace(/'/g, "\\'")}', ${price}, ${p.stock})"`;
+            
+            let imageUrl = '';
+            if (p.image) {
+                if (p.image.startsWith('http')) {
+                    imageUrl = p.image;
+                } else {
+                    imageUrl = '/uploads/medium/' + p.image;
+                }
+            }
+            
             return `
             <div class="product-item" style="${isOutOfStock ? 'opacity:0.5;' : ''}" ${onclickAttr}>
                 <div class="product-image">
-                    ${p.image ? `<img src="/uploads/medium/${p.image}" alt="${p.name}">` : '<i class="fas fa-image" style="font-size: 24px; color:#ccc;"></i>'}
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${p.name}">` : '<i class="fas fa-image" style="font-size: 24px; color:#ccc;"></i>'}
                 </div>
                 <div class="product-name">${p.name || ''}</div>
                 <div class="product-price">${price.toFixed(2)} DNT</div>
@@ -435,7 +477,6 @@
             </div>`;
         }).join('');
     }
-
     function addToCart(id, name, price, stock) {
         if (stock <= 0) {
             alert('Stock insuffisant');
