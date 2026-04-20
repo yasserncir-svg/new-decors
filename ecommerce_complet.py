@@ -7585,7 +7585,7 @@ def about_page():
     
     conn.close()
     
-    return render_template_string(HTML_ABOUT, 
+    return render_template('about.html', 
                                   about_text=about_text,
                                   settings=settings,
                                   categories=categories,
