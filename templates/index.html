@@ -1827,21 +1827,60 @@ function showToast(msg) {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// ========== MENU MOBILE CORRIGÉ ==========
 function toggleMobileMenu() {
     document.getElementById('navMenu').classList.toggle('active');
-    // Gestion des sous-menus sur mobile
+}
+
+// Gestion des sous-menus sur mobile (à initialiser une seule fois)
+function initMobileSubmenus() {
     document.querySelectorAll('.nav-item').forEach(item => {
-        if (item.querySelector('.submenu')) {
-            item.addEventListener('click', function(e) {
-                if (window.innerWidth <= 768) {
-                    e.preventDefault();
-                    this.classList.toggle('active');
-                }
-            });
+        const link = item.querySelector('> a');
+        const submenu = item.querySelector('.submenu');
+        
+        if (submenu) {
+            // Supprimer les anciens événements pour éviter les doublons
+            link.removeEventListener('click', handleSubmenuClick);
+            // Ajouter le nouvel événement
+            link.addEventListener('click', handleSubmenuClick);
         }
     });
 }
 
+function handleSubmenuClick(e) {
+    // Vérifier si on est sur mobile
+    if (window.innerWidth <= 768) {
+        const parent = this.parentElement;
+        const submenu = parent.querySelector('.submenu');
+        
+        if (submenu) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Fermer les autres sous-menus ouverts
+            document.querySelectorAll('.nav-item.active').forEach(item => {
+                if (item !== parent) {
+                    item.classList.remove('active');
+                }
+            });
+            // Ouvrir/fermer celui-ci
+            parent.classList.toggle('active');
+        }
+        // Si pas de sous-menu, laisser le lien fonctionner normalement
+    }
+}
+
+// Réinitialiser quand la fenêtre change de taille
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        // Sur desktop, fermer tous les sous-menus
+        document.querySelectorAll('.nav-item.active').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+});
+
+// ========== VOS AUTRES FONCTIONS ==========
 function showLoginModal() {
     document.getElementById('loginModal').classList.add('open');
     document.getElementById('loginOverlay').classList.add('open');
@@ -1884,32 +1923,27 @@ async function handleRegister() {
     let password = document.getElementById('reg_password').value;
     let password2 = document.getElementById('reg_password2').value;
     
-    // Validation des champs obligatoires
     if (!username || !fullname || !email || !password) { 
         alert('Veuillez remplir tous les champs'); 
         return; 
     }
     
-    // Validation du mot de passe (8 caractères minimum)
     if (password.length < 8) {
         alert('Le mot de passe doit contenir au moins 8 caractères');
         return;
     }
     
-    // Vérifier si le mot de passe contient au moins un chiffre
     if (!/\d/.test(password)) {
         alert('Le mot de passe doit contenir au moins un chiffre');
         return;
     }
     
-    // Validation du téléphone (minimum 8 chiffres)
     let phoneDigits = phone.replace(/\D/g, '');
     if (phoneDigits.length < 8) {
         alert('Le numéro de téléphone doit contenir au moins 8 chiffres');
         return;
     }
     
-    // Vérifier que les mots de passe correspondent
     if (password !== password2) { 
         alert('Les mots de passe ne correspondent pas'); 
         return; 
@@ -1935,7 +1969,8 @@ async function handleRegister() {
         alert(data.error || 'Erreur');
     }
 }
-// Slider functions
+
+// ========== SLIDER ==========
 let currentSlide = 0, slides = [], slideInterval;
 function initSlider() {
     slides = document.querySelectorAll('.slide');
@@ -1964,65 +1999,20 @@ function startAutoSlide() { if (slideInterval) clearInterval(slideInterval); sli
 function stopAutoSlide() { if (slideInterval) clearInterval(slideInterval); }
 function resetAutoSlide() { stopAutoSlide(); startAutoSlide(); }
 
-document.addEventListener('DOMContentLoaded', initSlider);
-// Ajoutez ces fonctions avant loadCart();
-function checkPasswordStrength(password) {
-    let strengthDiv = document.getElementById('passwordStrength');
-    if (!strengthDiv) return;
-    
-    let isValid = password.length >= 8 && /\d/.test(password);
-    
-    if (password.length === 0) {
-        strengthDiv.innerHTML = '';
-        strengthDiv.style.color = '';
-    } else if (password.length < 8) {
-        strengthDiv.innerHTML = '⚠️ Trop court (minimum 8 caractères)';
-        strengthDiv.style.color = '#e74c3c';
-    } else if (!/\d/.test(password)) {
-        strengthDiv.innerHTML = '⚠️ Doit contenir au moins un chiffre';
-        strengthDiv.style.color = '#e74c3c';
-    } else {
-        strengthDiv.innerHTML = '✓ Mot de passe valide';
-        strengthDiv.style.color = '#27ae60';
-    }
-}
-
-function validatePhone(phone) {
-    let phoneHelp = document.getElementById('phoneHelp');
-    let phoneInput = document.getElementById('reg_phone');
-    if (!phoneHelp || !phoneInput) return;
-    
-    let phoneDigits = phone.replace(/\D/g, '');
-    
-    if (phoneDigits.length === 0) {
-        phoneHelp.innerHTML = 'Minimum 8 chiffres';
-        phoneHelp.style.color = '#666';
-        phoneInput.style.borderColor = '#ddd';
-    } else if (phoneDigits.length < 8) {
-        phoneHelp.innerHTML = `⚠️ ${phoneDigits.length}/8 chiffres minimum`;
-        phoneHelp.style.color = '#e74c3c';
-        phoneInput.style.borderColor = '#e74c3c';
-    } else {
-        phoneHelp.innerHTML = '✓ Numéro valide';
-        phoneHelp.style.color = '#27ae60';
-        phoneInput.style.borderColor = '#27ae60';
-    }
-}
-
-loadCart();
-// Gestion du clic sur les cartes produits pour mobile
+// ========== INITIALISATION ==========
 document.addEventListener('DOMContentLoaded', function() {
-    // Pour chaque carte produit
+    initSlider();
+    loadCart();
+    initMobileSubmenus();  // ← AJOUTER CETTE LIGNE
+    
+    // Gestion du clic sur les cartes produits
     document.querySelectorAll('.product-card').forEach(function(card) {
         card.addEventListener('click', function(e) {
-            // Éviter si on clique sur un bouton
             if (e.target.closest('.add-to-cart-btn') || 
                 e.target.closest('.overlay-btn-cart') || 
                 e.target.closest('.btn-add-cart')) {
                 return;
             }
-            
-            // Trouver le lien du produit
             const productLink = card.querySelector('.product-title a, .btn-view');
             if (productLink && productLink.href) {
                 window.location.href = productLink.href;
@@ -2030,7 +2020,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
 </script>
 </body>
 </html>
