@@ -1227,6 +1227,7 @@ async function viewOrder(id) {
 }
 // ========== ENTRÉES STOCK CORRIGÉE ==========
 async function loadStockIn() {
+    let isAdmin = '{{ session.role }}' === 'admin';
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
         let [stock, products, suppliers] = await Promise.all([
