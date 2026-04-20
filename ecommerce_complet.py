@@ -7607,7 +7607,7 @@ def contact_page():
     
     conn.close()
     
-    return render_template_string(HTML_CONTACT, 
+    return render_template('contact.html', 
                                   settings=settings,
                                   categories=categories)
 
