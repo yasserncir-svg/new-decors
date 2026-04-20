@@ -6250,32 +6250,40 @@ def admin_subcategory_delete(sub_id):
 def subcategory_page(slug):
     conn = get_db()
     cursor = conn.cursor()
-    execute_query(cursor,"SELECT id, name, description FROM subcategories WHERE slug=?", (slug,))
+    
+    # Récupérer la sous-catégorie
+    execute_query(cursor, "SELECT id, name, description, category_id FROM subcategories WHERE slug=?", (slug,))
     sub = cursor.fetchone()
     if not sub:
         return "Sous-catégorie non trouvée", 404
     
-    execute_query(cursor,"SELECT * FROM products WHERE subcategory_id=? AND active=1 ORDER BY created_at DESC", (sub['id'],))
+    # Récupérer les produits de cette sous-catégorie
+    execute_query(cursor, "SELECT * FROM products WHERE subcategory_id=? AND active=1 ORDER BY created_at DESC", (sub['id'],))
     products = cursor.fetchall()
     
-    execute_query(cursor,"SELECT * FROM categories WHERE active=1 ORDER BY order_position")
+    # Récupérer toutes les catégories
+    execute_query(cursor, "SELECT * FROM categories WHERE active=1 ORDER BY order_position")
     categories = cursor.fetchall()
     
+    # Récupérer les sous-catégories pour chaque catégorie
     for cat in categories:
-        execute_query(cursor,"SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
+        execute_query(cursor, "SELECT * FROM subcategories WHERE category_id=? ORDER BY name", (cat['id'],))
         cat['subcategories'] = cursor.fetchall()
     
-    execute_query(cursor,"SELECT key, value FROM settings")
+    # Récupérer les settings
+    execute_query(cursor, "SELECT key, value FROM settings")
     settings = {row['key']: row['value'] for row in cursor.fetchall()}
     
     conn.close()
     
+    # ✅ CORRECTION : Utiliser 'sub' au lieu de 'cat'
     return render_template('index.html', 
-                                  products=products, 
-                                  categories=categories,
-                                  settings=settings, 
-                                  category_name=cat['name'],
-                                  category_description=cat['description'] or '')
+        products=products, 
+        categories=categories,
+        settings=settings, 
+        category_name=sub['name'],           # ✅ Nom de la sous-catégorie
+        category_description=sub['description'] or ''  # ✅ Description de la sous-catégorie
+    )
     
 # ==================== API COMMANDES ====================
 
