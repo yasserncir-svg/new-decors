@@ -475,7 +475,7 @@ let productsData = [], categoriesData = [], subcategoriesData = [], suppliersDat
 let currentProductId = null;
 let currentTab = 'dashboard';  // <-- AJOUTER CETTE LIGNE
 let isAdmin = false;
-
+let userRole = '{{ session.role }}';
 // Récupérer le rôle au chargement
 fetch('/admin/check-role')
     .then(r => r.json())
