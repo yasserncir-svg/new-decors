@@ -367,12 +367,19 @@
     let products = [];
     let cart = [];
     let currentTicketNumber = 'TICKET-001';
-    let subcategoriesData = []
+    let subcategoriesData = [];
+
     async function loadProducts() {
         try {
             const response = await fetch('/admin/products');
             const data = await response.json();
             products = data.products || [];
+            
+            // Charger les sous-catégories pour le filtrage
+            const catsResponse = await fetch('/admin/categories');
+            const catsData = await catsResponse.json();
+            subcategoriesData = catsData.subcategories || [];
+            
             renderProducts();
         } catch (error) {
             console.error('Erreur:', error);
@@ -396,28 +403,6 @@
         document.getElementById('dateTime').innerHTML = now.toLocaleDateString('fr-FR') + ' ' + now.toLocaleTimeString('fr-FR');
     }
 
-    let products = [];
-    let cart = [];
-    let currentTicketNumber = 'TICKET-001';
-    let subcategoriesData = [];
-
-    async function loadProducts() {
-        try {
-            const response = await fetch('/admin/products');
-            const data = await response.json();
-            products = data.products || [];
-            
-            // Charger les sous-catégories pour le filtrage
-            const catsResponse = await fetch('/admin/categories');
-            const catsData = await catsResponse.json();
-            subcategoriesData = catsData.subcategories || [];
-            
-            renderProducts();
-        } catch (error) {
-            console.error('Erreur:', error);
-            document.getElementById('productsGrid').innerHTML = '<div style="text-align:center; padding:40px; color:red;">❌ Erreur chargement</div>';
-        }
-    }
     function renderProducts() {
         const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
         const activeCategory = document.querySelector('.category-tab.active')?.dataset.category || 'all';
@@ -477,6 +462,7 @@
             </div>`;
         }).join('');
     }
+
     function addToCart(id, name, price, stock) {
         if (stock <= 0) {
             alert('Stock insuffisant');
