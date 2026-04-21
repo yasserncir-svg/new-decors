@@ -1227,6 +1227,7 @@ async function viewOrder(id) {
 }
 // ========== ENTRÉES STOCK AVEC FILTRES ==========
 async function loadStockIn() {
+    history.pushState(null, '', '?tab=stock-in');
     let isAdmin = '{{ session.role }}' === 'admin';
     
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
