@@ -1532,7 +1532,21 @@ async function loadStockIn() {
         `;
         
         document.getElementById('dynamicContent').innerHTML = html;
-        
+        let today = new Date();
+        let firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        let firstDayStr = firstDayOfMonth.toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+    
+        // Appliquer les dates par défaut
+        let startDateInput = document.getElementById('filterStartDate');
+        let endDateInput = document.getElementById('filterEndDate');
+    
+        if (startDateInput) {
+            startDateInput.value = firstDayStr;
+        }
+        if (endDateInput) {
+            endDateInput.value = todayStr;
+        }
         // Afficher les données initiales
         displayFilteredStock(stock);
         
