@@ -1531,7 +1531,21 @@ async function loadStockIn() {
             </div>
         `;
         document.getElementById('dynamicContent').innerHTML = html;
-        
+        let today = new Date();
+        let firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        let firstDayStr = firstDayOfMonth.toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+    
+        // Appliquer les dates par défaut
+        let startDateInput = document.getElementById('filterStartDate');
+        let endDateInput = document.getElementById('filterEndDate');
+    
+        if (startDateInput) {
+            startDateInput.value = firstDayStr;
+        }
+        if (endDateInput) {
+            endDateInput.value = todayStr;
+        }
         // Afficher toutes les données au chargement
         displayFilteredStock(stock);
         
@@ -1543,14 +1557,24 @@ async function loadStockIn() {
 
 // Fonction pour appliquer les filtres
 function applyStockFilters() {
+    console.log("🔍 applyStockFilters appelé");
+    
     let startDate = document.getElementById('filterStartDate').value;
     let endDate = document.getElementById('filterEndDate').value;
     let productName = document.getElementById('filterProduct').value;
     let supplierName = document.getElementById('filterSupplier').value;
     
+    console.log("Filtres:", {startDate, endDate, productName, supplierName});
+    console.log("Données totales:", window.allStockData ? window.allStockData.length : 0);
+    
+    if (!window.allStockData) {
+        console.error("❌ window.allStockData n'existe pas");
+        return;
+    }
+    
     let filtered = [...window.allStockData];
     
-    // Filtre par date
+    // Filtre par date début
     if (startDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
@@ -1559,6 +1583,7 @@ function applyStockFilters() {
         });
     }
     
+    // Filtre par date fin
     if (endDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
@@ -1577,18 +1602,22 @@ function applyStockFilters() {
         filtered = filtered.filter(s => s.supplier_name === supplierName);
     }
     
+    console.log("Données filtrées:", filtered.length);
+    
     displayFilteredStock(filtered);
 }
-
-// Fonction pour réinitialiser les filtres
 function resetStockFilters() {
+    console.log("🔄 resetStockFilters appelé");
+    
     document.getElementById('filterStartDate').value = '';
     document.getElementById('filterEndDate').value = '';
     document.getElementById('filterProduct').value = '';
     document.getElementById('filterSupplier').value = '';
-    displayFilteredStock(window.allStockData);
+    
+    if (window.allStockData) {
+        displayFilteredStock(window.allStockData);
+    }
 }
-
 // Fonction pour afficher les données filtrées
 function displayFilteredStock(stock) {
     let isAdmin = '{{ session.role }}' === 'admin';
