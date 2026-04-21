@@ -1225,45 +1225,6 @@ async function viewOrder(id) {
         <button class="btn btn-primary mt-3" onclick="closeModal()">Fermer</button>
     `);
 }
-// ========== VARIABLES GLOBALES ==========
-let cachedProducts = null;
-let cachedSuppliers = null;
-
-// ========== CHARGEMENT DES DONNÉES AU DÉMARRAGE ==========
-async function loadStockData() {
-    try {
-        let [products, suppliers] = await Promise.all([
-            fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
-        ]);
-        cachedProducts = products.products || [];
-        cachedSuppliers = suppliers;
-        console.log('✅ Données chargées en cache');
-    } catch(e) {
-        console.error('Erreur chargement cache:', e);
-    }
-}
-
-// ========== VARIABLES GLOBALES ==========
-let cachedProducts = null;
-let cachedSuppliers = null;
-
-// ========== CHARGEMENT DES DONNÉES AU DÉMARRAGE ==========
-async function loadStockData() {
-    try {
-        let [products, suppliers] = await Promise.all([
-            fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
-        ]);
-        cachedProducts = products.products || [];
-        cachedSuppliers = suppliers;
-        window.stockProducts = cachedProducts;
-        console.log('✅ Données chargées en cache');
-    } catch(e) {
-        console.error('Erreur chargement cache:', e);
-    }
-}
-
 // ========== ENTRÉES STOCK AVEC FILTRES ==========
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
@@ -2106,8 +2067,8 @@ function showStockInModal() {
     }).catch(e => {
         showToast('Erreur de chargement des données', 'error');
     });
-} 
-    // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
+}
+// ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
