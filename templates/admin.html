@@ -1572,27 +1572,38 @@ function applyStockInFilters() {
     
     let filtered = [...window.allStockData];
     
+    // 🔧 FONCTION POUR EXTRAIRE LA DATE CORRECTEMENT
+    function getDateOnly(dateStr) {
+        if (!dateStr) return '';
+        // Si c'est un objet Date
+        if (typeof dateStr !== 'string') {
+            dateStr = String(dateStr);
+        }
+        // Enlever tout après le T ou l'espace
+        let cleaned = dateStr.split('T')[0].split(' ')[0];
+        return cleaned;
+    }
+    
     // Filtre par date début
-    if (startDate) {
-        let start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
+    if (startDate && startDate !== '') {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            let itemDate = new Date(s.date.split(' ')[0]);
-            return itemDate >= start;
+            let itemDate = getDateOnly(s.date);
+            console.log(`Item: ${itemDate} >= ${startDate} ? ${itemDate >= startDate}`);
+            return itemDate >= startDate;
         });
     }
     
     // Filtre par date fin
-    if (endDate) {
-        let end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+    if (endDate && endDate !== '') {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            let itemDate = new Date(s.date.split(' ')[0]);
-            return itemDate <= end;
+            let itemDate = getDateOnly(s.date);
+            return itemDate <= endDate;
         });
     }
+    
+    console.log("Données après filtre dates:", filtered.length);
     
     // Normaliser les chaînes
     function normalize(str) {
@@ -1616,7 +1627,7 @@ function applyStockInFilters() {
         });
     }
     
-    console.log("Dates filtrées:", startDate, "->", endDate, "Résultat:", filtered.length);
+    console.log("Données filtrées finales:", filtered.length);
     displayFilteredStock(filtered);
 }
 function resetStockInFilters() {
