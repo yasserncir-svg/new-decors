@@ -6495,6 +6495,8 @@ def admin_stock_in():
     conn.close()
     return jsonify(stock)
 
+from datetime import datetime  # Ajoute cette ligne en haut du fichier si pas déjà présente
+
 @app.route('/admin/stock-in', methods=['POST'])
 @login_required
 def admin_stock_in_save():
@@ -6505,6 +6507,9 @@ def admin_stock_in_save():
     prix_vente = float(request.form.get('prix_vente'))
     total = quantity * purchase_price
     notes = request.form.get('notes', '')
+    
+    # ✅ AJOUTE LA DATE AU FORMAT CORRECT
+    current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     conn = get_db()
     cursor = conn.cursor()
@@ -6520,11 +6525,11 @@ def admin_stock_in_save():
         supplier = cursor.fetchone()
         supplier_name = supplier['name'] if supplier else ''
     
-    # 1. Insérer l'entrée stock
+    # 1. Insérer l'entrée stock avec la date ✅
     execute_query(cursor,"""
-        INSERT INTO stock_in (product_id, supplier_id, quantity, purchase_price, total, notes) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (product_id, supplier_id, quantity, purchase_price, total, notes))
+        INSERT INTO stock_in (product_id, supplier_id, quantity, purchase_price, total, date, notes) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (product_id, supplier_id, quantity, purchase_price, total, current_date, notes))
     
     # 2. Mettre à jour le produit
     execute_query(cursor,"""
@@ -6554,7 +6559,7 @@ def admin_stock_in_save():
         'success': True, 
         'product': updated_product
     })
-@app.route('/admin/stock-out')
+    @app.route('/admin/stock-out')
 @login_required
 def admin_stock_out():
     conn = get_db()
