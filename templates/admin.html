@@ -1496,33 +1496,26 @@ async function loadStockIn() {
                     <div class="filters-row">
                         <div class="filter-group">
                             <label><i class="fas fa-calendar"></i> Date début</label>
-                            <input type="date" id="filterStartDate" value="">
+                            <input type="date" id="filterStartDate" value="" onchange="applyStockFilters()" oninput="applyStockFilters()">
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-calendar"></i> Date fin</label>
-                            <input type="date" id="filterEndDate" value="">
+                            <input type="date" id="filterEndDate" value="" onchange="applyStockFilters()" oninput="applyStockFilters()">
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-box"></i> Produit</label>
-                            <select id="filterProduct">
+                            <select id="filterProduct" onchange="applyStockFilters()">
                                 ${productOptions}
                             </select>
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-building"></i> Fournisseur</label>
-                            <select id="filterSupplier">
+                            <select id="filterSupplier" onchange="applyStockFilters()">
                                 <option value="">🏭 Tous les fournisseurs</option>
                                 ${suppliers.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="filter-buttons">
-                            <button class="btn-filter btn-filter-primary" onclick="applyStockFilters()">
-                                <i class="fas fa-search"></i> Filtrer
-                            </button>
-                            <button class="btn-filter btn-filter-secondary" onclick="resetStockFilters()">
-                                <i class="fas fa-undo"></i> Réinitialiser
-                            </button>
-                        </div>
+
                     </div>
                 </div>
                 
@@ -1547,7 +1540,7 @@ async function loadStockIn() {
             endDateInput.value = todayStr;
         }
         // Afficher toutes les données au chargement
-        displayFilteredStock(stock);
+        applyStockFilters();
         
     } catch(e) {
         console.error('Erreur loadStockIn:', e);
