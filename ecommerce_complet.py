@@ -6479,6 +6479,8 @@ def admin_supplier_delete(sup_id):
 
 # ==================== API STOCK ====================
 
+from flask import make_response  # Ajoute en haut du fichier si pas déjà
+
 @app.route('/admin/stock-in')
 @login_required
 def admin_stock_in():
@@ -6493,7 +6495,13 @@ def admin_stock_in():
     """)
     stock = cursor.fetchall()
     conn.close()
-    return jsonify(stock)
+    
+    # ✅ AJOUTE CES LIGNES POUR ÉVITER LE CACHE
+    response = make_response(jsonify(stock))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 from datetime import datetime 
 
