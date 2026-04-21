@@ -1225,7 +1225,7 @@ async function viewOrder(id) {
         <button class="btn btn-primary mt-3" onclick="closeModal()">Fermer</button>
     `);
 }
-// ========== ENTRÉES STOCK COMPLET ==========
+// ========== ENTRÉES STOCK COMPLET CORRIGÉ ==========
 
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
@@ -1238,8 +1238,6 @@ async function loadStockIn() {
             fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
             fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
         ]);
-        
-        console.log('Stock reçu:', stock);
         
         window.stockProducts = products.products || [];
         window.stockSuppliers = suppliers;
@@ -1327,7 +1325,6 @@ async function loadStockIn() {
                 }
                 .stock-table-wrapper {
                     overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
                 }
                 .stock-table {
                     width: 100%;
@@ -1345,9 +1342,6 @@ async function loadStockIn() {
                 .stock-table td {
                     padding: 10px 12px;
                     border-bottom: 1px solid #eee;
-                }
-                .stock-table tr:hover {
-                    background: #fafafa;
                 }
                 .stock-cards-container {
                     display: flex;
@@ -1423,9 +1417,6 @@ async function loadStockIn() {
                         grid-template-columns: repeat(2, 1fr);
                         gap: 10px;
                     }
-                    .stock-stat-number {
-                        font-size: 20px;
-                    }
                     .filters-row {
                         flex-direction: column;
                     }
@@ -1449,21 +1440,21 @@ async function loadStockIn() {
                     <div class="filters-row">
                         <div class="filter-group">
                             <label>📅 Date début</label>
-                            <input type="date" id="filterStartDate" onchange="applyStockFilters()" oninput="applyStockFilters()">
+                            <input type="date" id="filterStartDate">
                         </div>
                         <div class="filter-group">
                             <label>📅 Date fin</label>
-                            <input type="date" id="filterEndDate" onchange="applyStockFilters()" oninput="applyStockFilters()">
+                            <input type="date" id="filterEndDate">
                         </div>
                         <div class="filter-group">
                             <label>📦 Produit</label>
-                            <select id="filterProduct" onchange="applyStockFilters()">
+                            <select id="filterProduct">
                                 ${productOptions}
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>🏭 Fournisseur</label>
-                            <select id="filterSupplier" onchange="applyStockFilters()">
+                            <select id="filterSupplier">
                                 ${supplierOptions}
                             </select>
                         </div>
@@ -1479,7 +1470,17 @@ async function loadStockIn() {
         `;
         
         document.getElementById('dynamicContent').innerHTML = html;
-        applyStockFilters();
+        
+        // Attacher les événements APRÈS avoir inséré le HTML
+        document.getElementById('filterStartDate').addEventListener('change', applyStockFilters);
+        document.getElementById('filterStartDate').addEventListener('input', applyStockFilters);
+        document.getElementById('filterEndDate').addEventListener('change', applyStockFilters);
+        document.getElementById('filterEndDate').addEventListener('input', applyStockFilters);
+        document.getElementById('filterProduct').addEventListener('change', applyStockFilters);
+        document.getElementById('filterSupplier').addEventListener('change', applyStockFilters);
+        
+        // Afficher les données
+        updateStockDisplay(stock);
         
     } catch(e) {
         console.error('Erreur loadStockIn:', e);
@@ -1563,87 +1564,126 @@ function updateStockDisplay(stock) {
         </div>
         ${isAdmin ? `<div class="stock-stat-card"><div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div><div class="stock-stat-label">Investissement</div></div>` : ''}
     `;
-    document.getElementById('stockStats').innerHTML = statsHtml;
+    
+    let statsContainer = document.getElementById('stockStats');
+    if (statsContainer) statsContainer.innerHTML = statsHtml;
+    
+    let contentContainer = document.getElementById('stockContent');
+    if (!contentContainer) return;
+    
+    if (stock.length === 0) {
+        contentContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        return;
+    }
     
     if (isMobile) {
-        displayStockCards(stock);
+        let cardsHtml = '<div class="stock-cards-container">';
+        for (let s of stock) {
+            let dateStr = '-';
+            if (s.date) {
+                let d = new Date(s.date);
+                if (!isNaN(d.getTime())) {
+                    dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+                }
+            }
+            let product = window.stockProducts.find(p => p.id == s.product_id);
+            cardsHtml += `
+                <div class="stock-card">
+                    <div class="stock-card-header">
+                        <span class="stock-card-date">📅 ${dateStr}</span>
+                        ${s.supplier_name ? `<span class="stock-card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
+                    </div>
+                    <div class="stock-card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
+                    <div class="stock-card-details">
+                        <div class="stock-card-detail"><div class="stock-card-detail-label">Quantité</div><div class="stock-card-detail-value">${s.quantity || 0}</div></div>
+                        <div class="stock-card-detail"><div class="stock-card-detail-label">Prix unit.</div><div class="stock-card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
+                        <div class="stock-card-detail"><div class="stock-card-detail-label">Total</div><div class="stock-card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
+                        <div class="stock-card-detail"><div class="stock-card-detail-label">Stock</div><div class="stock-card-detail-value">${product ? product.stock : '-'} u.</div></div>
+                    </div>
+                    ${s.notes ? `<div class="stock-card-notes">📝 ${escapeHtml(s.notes)}</div>` : ''}
+                </div>
+            `;
+        }
+        cardsHtml += '</div>';
+        contentContainer.innerHTML = cardsHtml;
     } else {
-        displayStockTable(stock);
-    }
-}
-
-function displayStockTable(stock) {
-    if (stock.length === 0) {
-        document.getElementById('stockContent').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
-        return;
-    }
-    
-    let html = `<div class="stock-table-wrapper"><table class="stock-table"><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
-    
-    for (let s of stock) {
-        let dateStr = '-';
-        if (s.date) {
-            let d = new Date(s.date);
-            if (!isNaN(d.getTime())) {
-                dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+        let tableHtml = `<div class="stock-table-wrapper"><table class="stock-table"><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
+        for (let s of stock) {
+            let dateStr = '-';
+            if (s.date) {
+                let d = new Date(s.date);
+                if (!isNaN(d.getTime())) {
+                    dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+                }
             }
+            let product = window.stockProducts.find(p => p.id == s.product_id);
+            tableHtml += `<tr>
+                <td><small>${dateStr}</small></td>
+                <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+                <td style="text-align:center;">${s.quantity || 0}</td>
+                <td>${(s.purchase_price || 0).toFixed(2)} DNT</span></td>
+                <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</span></td>
+                <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
+                <td>${product ? product.stock + ' unités' : '-'}</td>
+                <td><small>${escapeHtml(s.notes) || '-'}</small></td>
+            </tr>`;
         }
-        let product = window.stockProducts.find(p => p.id == s.product_id);
-        html += `<tr>
-            <td><small>${dateStr}</small></td>
-            <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
-            <td style="text-align:center; font-weight:700;">${s.quantity || 0}</td>
-            <td>${(s.purchase_price || 0).toFixed(2)} DNT</td>
-            <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
-            <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
-            <td>${product ? product.stock + ' unités' : '-'}</td>
-            <td><small>${escapeHtml(s.notes) || '-'}</small></td>
-        </tr>`;
+        tableHtml += `</tbody></table></div>`;
+        contentContainer.innerHTML = tableHtml;
     }
-    html += `</tbody></table></div>`;
-    document.getElementById('stockContent').innerHTML = html;
 }
 
-function displayStockCards(stock) {
-    if (stock.length === 0) {
-        document.getElementById('stockContent').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
-        return;
-    }
-    
-    let html = '<div class="stock-cards-container">';
-    for (let s of stock) {
-        let dateStr = '-';
-        if (s.date) {
-            let d = new Date(s.date);
-            if (!isNaN(d.getTime())) {
-                dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+function showStockInModal() {
+    Promise.all([
+        fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
+        fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
+    ]).then(([productsData, suppliers]) => {
+        let products = productsData.products || [];
+        let productOptions = '<option value="">-- Sélectionner un produit --</option>';
+        for (let p of products) {
+            productOptions += `<option value="${p.id}" data-current-stock="${p.stock || 0}" data-current-price="${(p.prix_vente || 0).toFixed(2)}">${p.name} (${p.reference}) - Stock: ${p.stock || 0}</option>`;
+        }
+        
+        let supplierOptions = '<option value="">-- Aucun fournisseur --</option>';
+        for (let s of suppliers) {
+            supplierOptions += `<option value="${s.id}">${s.name}</option>`;
+        }
+        
+        openModal('📥 Nouvelle entrée stock', `
+            <form id="stockInForm">
+                <div class="form-group"><label>Produit *</label><select name="product_id" id="productSelect" required>${productOptions}</select></div>
+                <div class="form-group"><label>Fournisseur</label><select name="supplier_id">${supplierOptions}</select></div>
+                <div class="form-group"><label>Quantité *</label><input type="number" name="quantity" id="qty" required min="1" value="1"></div>
+                <div class="form-group"><label>Prix d'achat unitaire *</label><input type="number" step="0.01" name="purchase_price" id="purchasePrice" required></div>
+                <div class="form-group"><label>Prix de vente *</label><input type="number" step="0.01" name="prix_vente" id="salePrice" required></div>
+                <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+                <button type="submit" class="btn btn-success">Valider</button>
+            </form>
+        `);
+        
+        document.getElementById('productSelect').addEventListener('change', function() {
+            let opt = this.options[this.selectedIndex];
+            let price = opt.getAttribute('data-current-price');
+            if (price && !document.getElementById('salePrice').value) {
+                document.getElementById('salePrice').value = price;
             }
-        }
-        let product = window.stockProducts.find(p => p.id == s.product_id);
-        html += `
-            <div class="stock-card">
-                <div class="stock-card-header">
-                    <span class="stock-card-date">📅 ${dateStr}</span>
-                    ${s.supplier_name ? `<span class="stock-card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
-                </div>
-                <div class="stock-card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
-                <div class="stock-card-details">
-                    <div class="stock-card-detail"><div class="stock-card-detail-label">Quantité</div><div class="stock-card-detail-value">${s.quantity || 0}</div></div>
-                    <div class="stock-card-detail"><div class="stock-card-detail-label">Prix unit.</div><div class="stock-card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
-                    <div class="stock-card-detail"><div class="stock-card-detail-label">Total</div><div class="stock-card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
-                    <div class="stock-card-detail"><div class="stock-card-detail-label">Stock</div><div class="stock-card-detail-value">${product ? product.stock : '-'} u.</div></div>
-                </div>
-                ${s.notes ? `<div class="stock-card-notes">📝 ${escapeHtml(s.notes)}</div>` : ''}
-            </div>
-        `;
-    }
-    html += '</div>';
-    document.getElementById('stockContent').innerHTML = html;
+        });
+        
+        document.getElementById('stockInForm').onsubmit = async (e) => {
+            e.preventDefault();
+            let fd = new FormData(e.target);
+            let res = await fetch('/admin/stock-in', { method: 'POST', body: fd });
+            let result = await res.json();
+            if (result.success) {
+                showToast('✅ Entrée enregistrée', 'success');
+                closeModal();
+                loadStockIn();
+            } else {
+                showToast('❌ Erreur', 'error');
+            }
+        };
+    });
 }
-
-window.addEventListener('resize', function() {
-    if (window.allStockData) updateStockDisplay(window.allStockData);
-});
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -1660,168 +1700,9 @@ function showToast(msg, type) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ========== MODAL POUR AJOUTER UNE ENTRÉE STOCK ==========
-
-function showStockInModal() {
-    Promise.all([
-        fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-        fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
-    ]).then(([productsData, suppliers]) => {
-        
-        let products = productsData.products || [];
-        let productOptions = '<option value="">-- Sélectionner un produit --</option>';
-        for (let p of products) {
-            let currentPrice = (p.prix_vente || 0).toFixed(2);
-            productOptions += `<option value="${p.id}" 
-                data-name="${(p.name || '').replace(/'/g, "\\'")}"
-                data-ref="${p.reference || ''}"
-                data-current-stock="${p.stock || 0}"
-                data-current-price="${currentPrice}">
-                ${p.name} (${p.reference}) - Stock: ${p.stock || 0} | Prix: ${currentPrice} DNT
-            </option>`;
-        }
-        
-        let supplierOptions = '<option value="">-- Aucun fournisseur --</option>';
-        for (let s of suppliers) {
-            supplierOptions += `<option value="${s.id}">${s.name}${s.company ? ' - ' + s.company : ''}</option>`;
-        }
-        
-        openModal('📥 Nouvelle entrée stock', `
-            <style>
-                .info-stock { background: #e3f2fd; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; }
-                .total-stock { background: #e8f5e9; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center; }
-                .total-stock span { font-size: 20px; font-weight: 800; color: #2e7d32; }
-                .product-info-detail { background: #f5f5f5; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
-                .form-control-custom { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-top: 5px; }
-            </style>
-            
-            <div class="info-stock">
-                <i class="fas fa-info-circle"></i> Cette entrée va augmenter le stock et mettre à jour les prix
-            </div>
-            
-            <form id="stockInForm">
-                <div class="form-group">
-                    <label>📦 Produit *</label>
-                    <select name="product_id" id="stockProductSelect" class="form-control-custom" required>
-                        ${productOptions}
-                    </select>
-                </div>
-                
-                <div id="productInfoDetail" class="product-info-detail">
-                    <small>🔖 Réf: <span id="productRef">-</span></small><br>
-                    <small>📊 Stock actuel: <span id="currentStock">0</span> unités</small><br>
-                    <small>💰 Prix vente actuel: <span id="currentPrice">0</span> DNT</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>🏭 Fournisseur</label>
-                    <select name="supplier_id" class="form-control-custom">
-                        ${supplierOptions}
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>📦 Quantité achetée *</label>
-                    <input type="number" name="quantity" id="stockQty" required min="1" value="1" class="form-control-custom">
-                </div>
-                
-                <div class="form-group">
-                    <label>💰 Prix d'achat unitaire (DNT) *</label>
-                    <input type="number" step="0.01" name="purchase_price" id="purchasePrice" required class="form-control-custom" placeholder="Prix d'achat">
-                </div>
-                
-                <div class="form-group">
-                    <label>💵 Prix de vente unitaire (DNT) *</label>
-                    <input type="number" step="0.01" name="prix_vente" id="salePrice" required class="form-control-custom" placeholder="Prix de vente au public">
-                </div>
-                
-                <div class="total-stock">
-                    💰 Investissement total: <span id="totalAmount">0.00 DNT</span>
-                </div>
-                
-                <div class="form-group">
-                    <label>📝 Notes (facture, etc.)</label>
-                    <textarea name="notes" rows="2" class="form-control-custom" placeholder="N° facture, commentaires..."></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="submit" class="btn btn-success" style="flex:1;">✅ Valider l'entrée</button>
-                    <button type="button" class="btn" onclick="closeModal()">Annuler</button>
-                </div>
-            </form>
-        `);
-        
-        setTimeout(() => {
-            const productSelect = document.getElementById('stockProductSelect');
-            const qtyInput = document.getElementById('stockQty');
-            const purchasePrice = document.getElementById('purchasePrice');
-            const salePrice = document.getElementById('salePrice');
-            const totalSpan = document.getElementById('totalAmount');
-            const productRefSpan = document.getElementById('productRef');
-            const currentStockSpan = document.getElementById('currentStock');
-            const currentPriceSpan = document.getElementById('currentPrice');
-            
-            function updateTotal() {
-                let qty = parseInt(qtyInput.value) || 0;
-                let price = parseFloat(purchasePrice.value) || 0;
-                totalSpan.innerHTML = (qty * price).toFixed(2) + ' DNT';
-            }
-            
-            function updateProductInfo() {
-                let select = productSelect;
-                let opt = select.options[select.selectedIndex];
-                if (select.value && opt) {
-                    productRefSpan.innerHTML = opt.getAttribute('data-ref') || '-';
-                    currentStockSpan.innerHTML = opt.getAttribute('data-current-stock') || 0;
-                    currentPriceSpan.innerHTML = opt.getAttribute('data-current-price') || 0;
-                    if (currentPriceSpan.innerHTML > 0 && !salePrice.value) {
-                        salePrice.value = parseFloat(currentPriceSpan.innerHTML).toFixed(2);
-                    }
-                }
-            }
-            
-            productSelect.addEventListener('change', updateProductInfo);
-            qtyInput.addEventListener('input', updateTotal);
-            purchasePrice.addEventListener('input', updateTotal);
-            salePrice.addEventListener('input', updateTotal);
-            
-            updateProductInfo();
-            updateTotal();
-        }, 100);
-        
-        document.getElementById('stockInForm').onsubmit = async (e) => {
-            e.preventDefault();
-            let submitBtn = e.target.querySelector('button[type="submit"]');
-            let originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
-            
-            let fd = new FormData(e.target);
-            
-            try {
-                let res = await fetch('/admin/stock-in', { method: 'POST', body: fd });
-                let result = await res.json();
-                
-                if (result.success) {
-                    showToast('✅ Entrée stock enregistrée', 'success');
-                    closeModal();
-                    await loadStockIn();
-                } else {
-                    showToast('❌ Erreur: ' + (result.error || 'Inconnue'), 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            } catch(err) {
-                showToast('❌ Erreur réseau', 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        };
-        
-    }).catch(e => {
-        showToast('Erreur de chargement des données', 'error');
-    });
-}
+window.addEventListener('resize', function() {
+    if (window.allStockData) updateStockDisplay(window.allStockData);
+});
 // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
