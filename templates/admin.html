@@ -1576,27 +1576,32 @@ function applyStockInFilters() {
     
     let filtered = [...window.allStockData];
     
-    if (startDate) {
+    // ⚠️ APPLIQUER LES FILTRES SEULEMENT SI LES VALEURS EXISTENT ⚠️
+    if (startDate && startDate !== '') {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            return s.date.split(' ')[0] >= startDate;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate >= startDate;
         });
     }
     
-    if (endDate) {
+    if (endDate && endDate !== '') {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            return s.date.split(' ')[0] <= endDate;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate <= endDate;
         });
     }
     
-    if (productName) {
+    if (productName && productName !== '') {
         filtered = filtered.filter(s => s.product_name === productName);
     }
     
-    if (supplierName) {
+    if (supplierName && supplierName !== '') {
         filtered = filtered.filter(s => s.supplier_name === supplierName);
     }
+    
+    console.log("Données filtrées:", filtered.length);
     
     displayFilteredStock(filtered);
 }
