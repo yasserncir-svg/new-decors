@@ -1241,7 +1241,9 @@ async function loadStockIn() {
         
         window.stockProducts = products.products || [];
         window.stockSuppliers = suppliers;
+        window.allStockData = stock; // Sauvegarder toutes les données pour filtrage
         
+        // Calcul des totaux (sur toutes les données)
         let totalQuantity = 0;
         let totalAmount = 0;
         for (let i = 0; i < stock.length; i++) {
@@ -1249,8 +1251,16 @@ async function loadStockIn() {
             totalAmount += stock[i].total || 0;
         }
         
-        // Détecter si c'est un mobile
-        let isMobile = window.innerWidth <= 768;
+        // Options des produits pour le filtre
+        let productOptions = '<option value="">📦 Tous les produits</option>';
+        let uniqueProducts = [];
+        for (let i = 0; i < stock.length; i++) {
+            let productName = stock[i].product_name;
+            if (productName && !uniqueProducts.includes(productName)) {
+                uniqueProducts.push(productName);
+                productOptions += `<option value="${escapeHtml(productName)}">${escapeHtml(productName)}</option>`;
+            }
+        }
         
         let html = `
             <style>
@@ -1278,6 +1288,72 @@ async function loadStockIn() {
                     margin-top: 5px;
                 }
                 
+                /* Filtres */
+                .filters-container {
+                    background: var(--white);
+                    border-radius: 16px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                }
+                .filters-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 15px;
+                    align-items: flex-end;
+                }
+                .filter-group {
+                    flex: 1;
+                    min-width: 150px;
+                }
+                .filter-group label {
+                    display: block;
+                    font-size: 12px;
+                    font-weight: 600;
+                    margin-bottom: 5px;
+                    color: var(--gray);
+                }
+                .filter-group input, .filter-group select {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 10px;
+                    font-size: 14px;
+                    transition: all 0.3s;
+                }
+                .filter-group input:focus, .filter-group select:focus {
+                    outline: none;
+                    border-color: #FF69B4;
+                    box-shadow: 0 0 0 2px rgba(255,105,180,0.2);
+                }
+                .filter-buttons {
+                    display: flex;
+                    gap: 10px;
+                }
+                .btn-filter {
+                    padding: 10px 20px;
+                    border-radius: 10px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    border: none;
+                }
+                .btn-filter-primary {
+                    background: linear-gradient(135deg, #FF69B4, #DB2777);
+                    color: white;
+                }
+                .btn-filter-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(255,105,180,0.3);
+                }
+                .btn-filter-secondary {
+                    background: #f0f0f0;
+                    color: var(--dark);
+                }
+                .btn-filter-secondary:hover {
+                    background: #e0e0e0;
+                }
+                
                 /* Version mobile - cartes */
                 .stock-cards-container {
                     display: flex;
@@ -1298,6 +1374,8 @@ async function loadStockIn() {
                     margin-bottom: 12px;
                     padding-bottom: 10px;
                     border-bottom: 1px solid #eee;
+                    flex-wrap: wrap;
+                    gap: 8px;
                 }
                 .stock-card-date {
                     font-weight: 700;
@@ -1325,7 +1403,7 @@ async function loadStockIn() {
                 }
                 .stock-card-detail {
                     flex: 1;
-                    min-width: 80px;
+                    min-width: 70px;
                     background: #f8f9fa;
                     padding: 8px;
                     border-radius: 10px;
@@ -1389,6 +1467,19 @@ async function loadStockIn() {
                     .stock-stat-label {
                         font-size: 10px;
                     }
+                    .filters-row {
+                        flex-direction: column;
+                    }
+                    .filter-group {
+                        width: 100%;
+                    }
+                    .filter-buttons {
+                        flex-direction: column;
+                    }
+                    .btn-filter {
+                        width: 100%;
+                        text-align: center;
+                    }
                 }
             </style>
             
@@ -1400,142 +1491,250 @@ async function loadStockIn() {
                     </button>
                 </div>
                 
-                <div class="stock-stats-grid">
-                    <div class="stock-stat-card">
-                        <div class="stock-stat-number">${stock.length}</div>
-                        <div class="stock-stat-label">Nombre d'entrées</div>
-                    </div>
-                    <div class="stock-stat-card">
-                        <div class="stock-stat-number">${totalQuantity}</div>
-                        <div class="stock-stat-label">Articles achetés</div>
-                    </div>
-                    ${isAdmin ? `
-                    <div class="stock-stat-card">
-                        <div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div>
-                        <div class="stock-stat-label">Investissement total</div>
-                    </div>
-                    ` : ''}
-                    <div class="stock-stat-card">
-                        <div class="stock-stat-number">${window.stockSuppliers.length}</div>
-                        <div class="stock-stat-label">Fournisseurs</div>
-                    </div>
-                </div>
-        `;
-        
-        // Affichage adapté selon mobile ou desktop
-        if (isMobile) {
-            // Version mobile : cartes
-            html += `<div class="stock-cards-container">`;
-            
-            if (stock.length === 0) {
-                html += '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock enregistrée</div>';
-            } else {
-                for (let i = 0; i < stock.length; i++) {
-                    let s = stock[i];
-                    let dateStr = s.date ? s.date.split(' ')[0] : '-';
-                    
-                    let product = window.stockProducts.find(p => p.id == s.product_id);
-                    let currentStock = product ? product.stock : '-';
-                    
-                    html += `
-                        <div class="stock-card">
-                            <div class="stock-card-header">
-                                <span class="stock-card-date"><i class="fas fa-calendar"></i> ${dateStr}</span>
-                                ${s.supplier_name ? `<span class="stock-card-supplier"><i class="fas fa-building"></i> ${escapeHtml(s.supplier_name)}</span>` : ''}
-                            </div>
-                            <div class="stock-card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
-                            <div class="stock-card-details">
-                                <div class="stock-card-detail">
-                                    <div class="stock-card-detail-label">Quantité</div>
-                                    <div class="stock-card-detail-value">${s.quantity || 0}</div>
-                                </div>
-                                <div class="stock-card-detail">
-                                    <div class="stock-card-detail-label">Prix unitaire</div>
-                                    <div class="stock-card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div>
-                                </div>
-                                <div class="stock-card-detail">
-                                    <div class="stock-card-detail-label">Total</div>
-                                    <div class="stock-card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div>
-                                </div>
-                                <div class="stock-card-detail">
-                                    <div class="stock-card-detail-label">Stock actuel</div>
-                                    <div class="stock-card-detail-value">${currentStock} unités</div>
-                                </div>
-                            </div>
-                            ${s.notes ? `<div class="stock-card-notes"><i class="fas fa-sticky-note"></i> ${escapeHtml(s.notes)}</div>` : ''}
+                <!-- Filtres -->
+                <div class="filters-container">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label><i class="fas fa-calendar"></i> Date début</label>
+                            <input type="date" id="filterStartDate" value="">
                         </div>
-                    `;
-                }
-            }
-            html += `</div>`;
-            
-        } else {
-            // Version desktop : tableau
-            html += `
-                <div class="stock-table-wrapper">
-                    <table class="stock-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Produit</th>
-                                <th class="text-center">Qté</th>
-                                <th>Prix unitaire</th>
-                                <th>Total</th>
-                                <th>Fournisseur</th>
-                                <th>Stock actuel</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            if (stock.length === 0) {
-                html += '<tr><td colspan="8" class="text-center" style="padding:40px;">📭 Aucune entrée stock enregistrée</td></tr>';
-            } else {
-                for (let i = 0; i < stock.length; i++) {
-                    let s = stock[i];
-                    let dateStr = s.date ? s.date.split(' ')[0] : '-';
-                    let timeStr = s.date && s.date.split(' ')[1] ? s.date.split(' ')[1].substring(0, 5) : '';
-                    
-                    let product = window.stockProducts.find(p => p.id == s.product_id);
-                    let currentStock = product ? product.stock : '-';
-                    
-                    html += '<tr>';
-                    html += '<td><strong>' + dateStr + '</strong>' + (timeStr ? '<br><small>' + timeStr + '</small>' : '') + '</td>';
-                    html += '<td><strong>' + escapeHtml(s.product_name || '-') + '</strong></td>';
-                    html += '<td class="text-center" style="font-weight: 700;">' + (s.quantity || 0) + '</td>';
-                    html += '<td>' + (s.purchase_price || 0).toFixed(2) + ' DNT</span></td>';
-                    html += '<td style="color: #27ae60; font-weight: 700;">' + (s.total || 0).toFixed(2) + ' DNT</span></td>';
-                    html += '<td>' + (s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-') + '</td>';
-                    html += '<td>' + currentStock + ' unités</span></td>';
-                    html += '<td><small>' + (s.notes ? escapeHtml(s.notes) : '-') + '</small></td>';
-                    html += '</tr>';
-                }
-            }
-            
-            html += `
-                        </tbody>
-                    </table>
+                        <div class="filter-group">
+                            <label><i class="fas fa-calendar"></i> Date fin</label>
+                            <input type="date" id="filterEndDate" value="">
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-box"></i> Produit</label>
+                            <select id="filterProduct">
+                                ${productOptions}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label><i class="fas fa-building"></i> Fournisseur</label>
+                            <select id="filterSupplier">
+                                <option value="">🏭 Tous les fournisseurs</option>
+                                ${suppliers.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn-filter btn-filter-primary" onclick="applyStockFilters()">
+                                <i class="fas fa-search"></i> Filtrer
+                            </button>
+                            <button class="btn-filter btn-filter-secondary" onclick="resetStockFilters()">
+                                <i class="fas fa-undo"></i> Réinitialiser
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            `;
-        }
-        
-        html += `</div>`;
+                
+                <div id="filteredStats" class="stock-stats-grid"></div>
+                <div id="filteredContent"></div>
+            </div>
+        `;
         document.getElementById('dynamicContent').innerHTML = html;
         
-        // Ajouter un listener pour redimensionnement
-        window.addEventListener('resize', function() {
-            let wasMobile = window.innerWidth <= 768;
-            if (wasMobile !== isMobile) {
-                loadStockIn(); // Recharger si la taille change
-            }
-        });
+        // Afficher toutes les données au chargement
+        displayFilteredStock(stock);
         
     } catch(e) {
         console.error('Erreur loadStockIn:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur de chargement: ' + e.message + '</div></div>';
     }
 }
+
+// Fonction pour appliquer les filtres
+function applyStockFilters() {
+    let startDate = document.getElementById('filterStartDate').value;
+    let endDate = document.getElementById('filterEndDate').value;
+    let productName = document.getElementById('filterProduct').value;
+    let supplierName = document.getElementById('filterSupplier').value;
+    
+    let filtered = [...window.allStockData];
+    
+    // Filtre par date
+    if (startDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate >= startDate;
+        });
+    }
+    
+    if (endDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate <= endDate;
+        });
+    }
+    
+    // Filtre par produit
+    if (productName) {
+        filtered = filtered.filter(s => s.product_name === productName);
+    }
+    
+    // Filtre par fournisseur
+    if (supplierName) {
+        filtered = filtered.filter(s => s.supplier_name === supplierName);
+    }
+    
+    displayFilteredStock(filtered);
+}
+
+// Fonction pour réinitialiser les filtres
+function resetStockFilters() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    document.getElementById('filterProduct').value = '';
+    document.getElementById('filterSupplier').value = '';
+    displayFilteredStock(window.allStockData);
+}
+
+// Fonction pour afficher les données filtrées
+function displayFilteredStock(stock) {
+    let isAdmin = '{{ session.role }}' === 'admin';
+    let isMobile = window.innerWidth <= 768;
+    
+    // Calcul des statistiques filtrées
+    let totalQuantity = 0;
+    let totalAmount = 0;
+    for (let i = 0; i < stock.length; i++) {
+        totalQuantity += stock[i].quantity || 0;
+        totalAmount += stock[i].total || 0;
+    }
+    
+    // Afficher les stats filtrées
+    let statsHtml = `
+        <div class="stock-stat-card">
+            <div class="stock-stat-number">${stock.length}</div>
+            <div class="stock-stat-label">Entrées</div>
+        </div>
+        <div class="stock-stat-card">
+            <div class="stock-stat-number">${totalQuantity}</div>
+            <div class="stock-stat-label">Articles</div>
+        </div>
+        ${isAdmin ? `
+        <div class="stock-stat-card">
+            <div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div>
+            <div class="stock-stat-label">Investissement</div>
+        </div>
+        ` : ''}
+    `;
+    document.getElementById('filteredStats').innerHTML = statsHtml;
+    
+    // Afficher le contenu (cartes ou tableau)
+    if (isMobile) {
+        displayStockCards(stock);
+    } else {
+        displayStockTable(stock);
+    }
+}
+
+// Affichage en cartes (mobile)
+function displayStockCards(stock) {
+    let html = `<div class="stock-cards-container">`;
+    
+    if (stock.length === 0) {
+        html += '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+    } else {
+        for (let i = 0; i < stock.length; i++) {
+            let s = stock[i];
+            let dateStr = s.date ? s.date.split(' ')[0] : '-';
+            
+            let product = window.stockProducts.find(p => p.id == s.product_id);
+            let currentStock = product ? product.stock : '-';
+            
+            html += `
+                <div class="stock-card">
+                    <div class="stock-card-header">
+                        <span class="stock-card-date"><i class="fas fa-calendar"></i> ${dateStr}</span>
+                        ${s.supplier_name ? `<span class="stock-card-supplier"><i class="fas fa-building"></i> ${escapeHtml(s.supplier_name)}</span>` : ''}
+                    </div>
+                    <div class="stock-card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
+                    <div class="stock-card-details">
+                        <div class="stock-card-detail">
+                            <div class="stock-card-detail-label">Quantité</div>
+                            <div class="stock-card-detail-value">${s.quantity || 0}</div>
+                        </div>
+                        <div class="stock-card-detail">
+                            <div class="stock-card-detail-label">Prix unitaire</div>
+                            <div class="stock-card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div>
+                        </div>
+                        <div class="stock-card-detail">
+                            <div class="stock-card-detail-label">Total</div>
+                            <div class="stock-card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div>
+                        </div>
+                        <div class="stock-card-detail">
+                            <div class="stock-card-detail-label">Stock actuel</div>
+                            <div class="stock-card-detail-value">${currentStock} unités</div>
+                        </div>
+                    </div>
+                    ${s.notes ? `<div class="stock-card-notes"><i class="fas fa-sticky-note"></i> ${escapeHtml(s.notes)}</div>` : ''}
+                </div>
+            `;
+        }
+    }
+    html += `</div>`;
+    document.getElementById('filteredContent').innerHTML = html;
+}
+
+// Affichage en tableau (desktop)
+function displayStockTable(stock) {
+    let html = `
+        <div class="stock-table-wrapper">
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Produit</th>
+                        <th class="text-center">Qté</th>
+                        <th>Prix unitaire</th>
+                        <th>Total</th>
+                        <th>Fournisseur</th>
+                        <th>Stock actuel</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    if (stock.length === 0) {
+        html += '<tr><td colspan="8" class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</td></tr>';
+    } else {
+        for (let i = 0; i < stock.length; i++) {
+            let s = stock[i];
+            let dateStr = s.date ? s.date.split(' ')[0] : '-';
+            let timeStr = s.date && s.date.split(' ')[1] ? s.date.split(' ')[1].substring(0, 5) : '';
+            
+            let product = window.stockProducts.find(p => p.id == s.product_id);
+            let currentStock = product ? product.stock : '-';
+            
+            html += '<tr>';
+            html += '<td><strong>' + dateStr + '</strong>' + (timeStr ? '<br><small>' + timeStr + '</small>' : '') + '</td>';
+            html += '<td><strong>' + escapeHtml(s.product_name || '-') + '</strong></td>';
+            html += '<td class="text-center" style="font-weight: 700;">' + (s.quantity || 0) + '</td>';
+            html += '<td>' + (s.purchase_price || 0).toFixed(2) + ' DNT</span></td>';
+            html += '<td style="color: #27ae60; font-weight: 700;">' + (s.total || 0).toFixed(2) + ' DNT</span></td>';
+            html += '<td>' + (s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-') + '</td>';
+            html += '<td>' + currentStock + ' unités</span></td>';
+            html += '<td><small>' + (s.notes ? escapeHtml(s.notes) : '-') + '</small></td>';
+            html += '</tr>';
+        }
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    document.getElementById('filteredContent').innerHTML = html;
+}
+
+// Ajouter un listener pour redimensionnement
+window.addEventListener('resize', function() {
+    if (window.allStockData) {
+        displayFilteredStock(window.allStockData);
+    }
+});
 // ========== ENTRÉE STOCK COMPLÈTE ==========
 function showStockInModal() {
     Promise.all([
