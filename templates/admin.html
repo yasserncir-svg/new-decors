@@ -1852,8 +1852,11 @@ function displayStockTable(stock) {
         for (let i = 0; i < stock.length; i++) {
             let s = stock[i];
             let dateStr = s.date ? s.date.split(' ')[0] : '-';
+                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                let parts = dateStr.split('-');
+                dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
             let timeStr = s.date && s.date.split(' ')[1] ? s.date.split(' ')[1].substring(0, 5) : '';
-            
             let product = window.stockProducts.find(p => p.id == s.product_id);
             let currentStock = product ? product.stock : '-';
             
