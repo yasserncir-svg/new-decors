@@ -1564,21 +1564,20 @@ async function loadStockIn() {
 }
 
 function applyStockInFilters() {
-    console.log("=== applyStockInFilters exécutée ===");
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
     let productName = document.getElementById('filterProduct')?.value || '';
     let supplierName = document.getElementById('filterSupplier')?.value || '';
     
-    console.log("Produit:", productName, "Fournisseur:", supplierName);
-    
-    if (!window.allStockData) {
-        console.log("Pas de données");
-        return;
-    }
+    if (!window.allStockData) return;
     
     let filtered = [...window.allStockData];
-    console.log("Données totales:", filtered.length);
+    
+    // Normaliser les chaînes (enlever espaces superflus)
+    function normalize(str) {
+        if (!str) return '';
+        return str.trim().toLowerCase();
+    }
     
     if (startDate && startDate !== '') {
         filtered = filtered.filter(s => {
@@ -1597,17 +1596,26 @@ function applyStockInFilters() {
     }
     
     if (productName && productName !== '') {
-        filtered = filtered.filter(s => s.product_name === productName);
+        let normalizedFilter = normalize(productName);
+        filtered = filtered.filter(s => {
+            let normalizedProduct = normalize(s.product_name);
+            return normalizedProduct === normalizedFilter;
+        });
+        console.log("Après filtre produit:", filtered.length);
     }
     
     if (supplierName && supplierName !== '') {
-        filtered = filtered.filter(s => s.supplier_name === supplierName);
+        let normalizedFilter = normalize(supplierName);
+        filtered = filtered.filter(s => {
+            let normalizedSupplier = normalize(s.supplier_name);
+            return normalizedSupplier === normalizedFilter;
+        });
     }
     
-    console.log("Données filtrées:", filtered.length);
+    console.log("Données filtrées finales:", filtered.length);
+    
     displayFilteredStock(filtered);
 }
-
 function resetStockInFilters() {
     let startDate = document.getElementById('filterStartDate');
     let endDate = document.getElementById('filterEndDate');
