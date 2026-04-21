@@ -1225,70 +1225,53 @@ async function viewOrder(id) {
         <button class="btn btn-primary mt-3" onclick="closeModal()">Fermer</button>
     `);
 }
-// ========== ENTRÉES STOCK COMPLET CORRIGÉ ==========
+// ========== ENTRÉES STOCK SIMPLIFIÉE ET CORRIGÉE ==========
 
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
-    let isAdmin = '{{ session.role }}' === 'admin';
     
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
+    
     try {
-        let [stock, products, suppliers] = await Promise.all([
+        let [stock, products] = await Promise.all([
             fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
+            fetch('/admin/products?t=' + Date.now()).then(r => r.json())
         ]);
         
         window.stockProducts = products.products || [];
-        window.stockSuppliers = suppliers;
         window.allStockData = stock;
         
-        let totalQuantity = stock.reduce((s, i) => s + (i.quantity || 0), 0);
-        let totalAmount = stock.reduce((s, i) => s + (i.total || 0), 0);
-        let isMobile = window.innerWidth <= 768;
-        
-        let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
-        let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
-        
-        let productOptions = '<option value="">📦 Tous les produits</option>';
-        for (let p of uniqueProducts) productOptions += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
-        
-        let supplierOptions = '<option value="">🏭 Tous les fournisseurs</option>';
-        for (let s of uniqueSuppliers) supplierOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
-        
+        // Générer le HTML complet
         let html = `
             <style>
-                .stock-stats-grid {
+                .stats-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                     gap: 15px;
                     margin-bottom: 25px;
                 }
-                .stock-stat-card {
+                .stat-card {
                     background: white;
                     border-radius: 16px;
                     padding: 15px;
                     text-align: center;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
                 }
-                .stock-stat-number {
+                .stat-number {
                     font-size: 24px;
                     font-weight: 800;
                     color: #DB2777;
                 }
-                .stock-stat-label {
+                .stat-label {
                     color: #6B6B7B;
                     font-size: 12px;
                     margin-top: 5px;
                 }
-                .filters-container {
+                .filters-bar {
                     background: white;
                     border-radius: 16px;
                     padding: 15px;
                     margin: 20px 0;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                }
-                .filters-row {
                     display: flex;
                     flex-wrap: wrap;
                     gap: 15px;
@@ -1310,7 +1293,6 @@ async function loadStockIn() {
                     padding: 10px 12px;
                     border: 1px solid #ddd;
                     border-radius: 10px;
-                    font-size: 14px;
                 }
                 .btn-reset {
                     padding: 10px 20px;
@@ -1318,177 +1300,115 @@ async function loadStockIn() {
                     border: none;
                     border-radius: 10px;
                     cursor: pointer;
-                    font-weight: 600;
                 }
-                .btn-reset:hover {
-                    background: #e0e0e0;
-                }
-                .stock-table-wrapper {
+                .table-wrapper {
                     overflow-x: auto;
                 }
-                .stock-table {
+                table {
                     width: 100%;
                     border-collapse: collapse;
-                    min-width: 700px;
                     font-size: 13px;
                 }
-                .stock-table th {
+                th {
                     background: #FDF2F8;
                     padding: 12px;
                     text-align: left;
-                    font-weight: 600;
                     border-bottom: 2px solid #FF69B4;
                 }
-                .stock-table td {
+                td {
                     padding: 10px 12px;
                     border-bottom: 1px solid #eee;
                 }
-                .stock-cards-container {
+                .cards-container {
                     display: flex;
                     flex-direction: column;
                     gap: 12px;
                 }
-                .stock-card {
+                .card-item {
                     background: white;
                     border-radius: 16px;
                     padding: 15px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
                     border: 1px solid #eee;
                 }
-                .stock-card-header {
+                .card-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 12px;
+                    margin-bottom: 10px;
                     padding-bottom: 8px;
                     border-bottom: 1px solid #eee;
-                    flex-wrap: wrap;
-                    gap: 8px;
                 }
-                .stock-card-date {
-                    font-weight: 700;
-                    font-size: 13px;
-                    color: #DB2777;
-                }
-                .stock-card-supplier {
-                    font-size: 11px;
-                    background: #e8f5e9;
-                    padding: 4px 10px;
-                    border-radius: 20px;
-                    color: #2e7d32;
-                }
-                .stock-card-product {
-                    font-weight: 700;
-                    font-size: 15px;
-                    margin-bottom: 12px;
-                }
-                .stock-card-details {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 10px;
-                    margin-bottom: 10px;
-                }
-                .stock-card-detail {
-                    flex: 1;
-                    min-width: 70px;
-                    background: #f8f9fa;
-                    padding: 8px;
-                    border-radius: 10px;
-                    text-align: center;
-                }
-                .stock-card-detail-label {
-                    font-size: 10px;
-                    color: #6B6B7B;
-                    margin-bottom: 4px;
-                }
-                .stock-card-detail-value {
-                    font-weight: 700;
-                    font-size: 14px;
-                }
-                .stock-card-notes {
-                    font-size: 11px;
-                    color: #6B6B7B;
-                    margin-top: 8px;
-                    padding-top: 8px;
-                    border-top: 1px solid #eee;
-                }
+                .card-date { font-weight: 700; color: #DB2777; }
+                .card-supplier { font-size: 11px; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; }
+                .card-product { font-weight: 700; font-size: 15px; margin-bottom: 12px; }
+                .card-details { display: flex; flex-wrap: wrap; gap: 10px; }
+                .card-detail { flex: 1; background: #f8f9fa; padding: 8px; border-radius: 10px; text-align: center; }
+                .card-detail-label { font-size: 10px; color: #6B6B7B; }
+                .card-detail-value { font-weight: 700; font-size: 14px; }
                 @media (max-width: 768px) {
-                    .stock-stats-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 10px;
-                    }
-                    .filters-row {
-                        flex-direction: column;
-                    }
-                    .filter-group {
-                        width: 100%;
-                    }
-                    .btn-reset {
-                        width: 100%;
-                        text-align: center;
-                    }
+                    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+                    .filters-bar { flex-direction: column; }
+                    .filter-group { width: 100%; }
+                    .btn-reset { width: 100%; text-align: center; }
                 }
             </style>
             
             <div class="card">
-                <div class="card-header" style="flex-wrap: wrap; justify-content: space-between;">
-                    <h2><i class="fas fa-arrow-down" style="color: #27ae60;"></i> Entrées stock</h2>
+                <div class="card-header" style="justify-content: space-between;">
+                    <h2>📥 Entrées stock</h2>
                     <button class="btn btn-success" onclick="showStockInModal()">➕ Nouvelle entrée</button>
                 </div>
                 
-                <div class="filters-container">
-                    <div class="filters-row">
-                        <div class="filter-group">
-                            <label>📅 Date début</label>
-                            <input type="date" id="filterStartDate">
-                        </div>
-                        <div class="filter-group">
-                            <label>📅 Date fin</label>
-                            <input type="date" id="filterEndDate">
-                        </div>
-                        <div class="filter-group">
-                            <label>📦 Produit</label>
-                            <select id="filterProduct">
-                                ${productOptions}
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label>🏭 Fournisseur</label>
-                            <select id="filterSupplier">
-                                ${supplierOptions}
-                            </select>
-                        </div>
-                        <div>
-                            <button class="btn-reset" onclick="resetStockFilters()">🔄 Réinitialiser</button>
-                        </div>
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>📅 Date début</label>
+                        <input type="date" id="filterStartDate">
                     </div>
+                    <div class="filter-group">
+                        <label>📅 Date fin</label>
+                        <input type="date" id="filterEndDate">
+                    </div>
+                    <div class="filter-group">
+                        <label>📦 Produit</label>
+                        <select id="filterProduct">
+                            <option value="">Tous les produits</option>
+                            ${[...new Set(stock.map(s => s.product_name).filter(Boolean))].map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>🏭 Fournisseur</label>
+                        <select id="filterSupplier">
+                            <option value="">Tous les fournisseurs</option>
+                            ${[...new Set(stock.map(s => s.supplier_name).filter(Boolean))].map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button class="btn-reset" onclick="resetFilters()">🔄 Réinitialiser</button>
                 </div>
                 
-                <div id="stockStats" class="stock-stats-grid"></div>
-                <div id="stockContent"></div>
+                <div id="statsContainer" class="stats-grid"></div>
+                <div id="listContainer"></div>
             </div>
         `;
         
         document.getElementById('dynamicContent').innerHTML = html;
         
-        // Attacher les événements APRÈS avoir inséré le HTML
-        document.getElementById('filterStartDate').addEventListener('change', applyStockFilters);
-        document.getElementById('filterStartDate').addEventListener('input', applyStockFilters);
-        document.getElementById('filterEndDate').addEventListener('change', applyStockFilters);
-        document.getElementById('filterEndDate').addEventListener('input', applyStockFilters);
-        document.getElementById('filterProduct').addEventListener('change', applyStockFilters);
-        document.getElementById('filterSupplier').addEventListener('change', applyStockFilters);
+        // Attacher les événements
+        document.getElementById('filterStartDate').onchange = () => applyFilters();
+        document.getElementById('filterStartDate').oninput = () => applyFilters();
+        document.getElementById('filterEndDate').onchange = () => applyFilters();
+        document.getElementById('filterEndDate').oninput = () => applyFilters();
+        document.getElementById('filterProduct').onchange = () => applyFilters();
+        document.getElementById('filterSupplier').onchange = () => applyFilters();
         
         // Afficher les données
-        updateStockDisplay(stock);
+        applyFilters();
         
     } catch(e) {
-        console.error('Erreur loadStockIn:', e);
+        console.error(e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-danger">❌ Erreur de chargement</div></div>';
     }
 }
 
-function applyStockFilters() {
+function applyFilters() {
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
     let productName = document.getElementById('filterProduct')?.value || '';
@@ -1498,41 +1418,29 @@ function applyStockFilters() {
     
     let filtered = [...window.allStockData];
     
-    function getDateOnly(dateStr) {
-        if (!dateStr) return '';
-        let d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-            return d.toISOString().split('T')[0];
-        }
-        return dateStr.split(' ')[0];
-    }
-    
     if (startDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            return getDateOnly(s.date) >= startDate;
+            let d = new Date(s.date);
+            return !isNaN(d.getTime()) && d.toISOString().split('T')[0] >= startDate;
         });
     }
     
     if (endDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
-            return getDateOnly(s.date) <= endDate;
+            let d = new Date(s.date);
+            return !isNaN(d.getTime()) && d.toISOString().split('T')[0] <= endDate;
         });
     }
     
-    if (productName) {
-        filtered = filtered.filter(s => s.product_name === productName);
-    }
+    if (productName) filtered = filtered.filter(s => s.product_name === productName);
+    if (supplierName) filtered = filtered.filter(s => s.supplier_name === supplierName);
     
-    if (supplierName) {
-        filtered = filtered.filter(s => s.supplier_name === supplierName);
-    }
-    
-    updateStockDisplay(filtered);
+    updateDisplay(filtered);
 }
 
-function resetStockFilters() {
+function resetFilters() {
     let startDate = document.getElementById('filterStartDate');
     let endDate = document.getElementById('filterEndDate');
     let productSelect = document.getElementById('filterProduct');
@@ -1543,41 +1451,36 @@ function resetStockFilters() {
     if (productSelect) productSelect.value = '';
     if (supplierSelect) supplierSelect.value = '';
     
-    applyStockFilters();
+    applyFilters();
 }
 
-function updateStockDisplay(stock) {
+function updateDisplay(stock) {
     let isAdmin = '{{ session.role }}' === 'admin';
     let isMobile = window.innerWidth <= 768;
     
     let totalQty = stock.reduce((s, i) => s + (i.quantity || 0), 0);
     let totalAmount = stock.reduce((s, i) => s + (i.total || 0), 0);
     
+    // Mettre à jour les stats
     let statsHtml = `
-        <div class="stock-stat-card">
-            <div class="stock-stat-number">${stock.length}</div>
-            <div class="stock-stat-label">Entrées</div>
-        </div>
-        <div class="stock-stat-card">
-            <div class="stock-stat-number">${totalQty}</div>
-            <div class="stock-stat-label">Articles</div>
-        </div>
-        ${isAdmin ? `<div class="stock-stat-card"><div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div><div class="stock-stat-label">Investissement</div></div>` : ''}
+        <div class="stat-card"><div class="stat-number">${stock.length}</div><div class="stat-label">Entrées</div></div>
+        <div class="stat-card"><div class="stat-number">${totalQty}</div><div class="stat-label">Articles</div></div>
+        ${isAdmin ? `<div class="stat-card"><div class="stat-number">${totalAmount.toFixed(2)} DNT</div><div class="stat-label">Investissement</div></div>` : ''}
     `;
+    document.getElementById('statsContainer').innerHTML = statsHtml;
     
-    let statsContainer = document.getElementById('stockStats');
-    if (statsContainer) statsContainer.innerHTML = statsHtml;
-    
-    let contentContainer = document.getElementById('stockContent');
-    if (!contentContainer) return;
+    // Afficher la liste
+    let listContainer = document.getElementById('listContainer');
+    if (!listContainer) return;
     
     if (stock.length === 0) {
-        contentContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        listContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
         return;
     }
     
     if (isMobile) {
-        let cardsHtml = '<div class="stock-cards-container">';
+        // Version cartes pour mobile
+        let cardsHtml = '<div class="cards-container">';
         for (let s of stock) {
             let dateStr = '-';
             if (s.date) {
@@ -1588,26 +1491,27 @@ function updateStockDisplay(stock) {
             }
             let product = window.stockProducts.find(p => p.id == s.product_id);
             cardsHtml += `
-                <div class="stock-card">
-                    <div class="stock-card-header">
-                        <span class="stock-card-date">📅 ${dateStr}</span>
-                        ${s.supplier_name ? `<span class="stock-card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
+                <div class="card-item">
+                    <div class="card-header">
+                        <span class="card-date">📅 ${dateStr}</span>
+                        ${s.supplier_name ? `<span class="card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
                     </div>
-                    <div class="stock-card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
-                    <div class="stock-card-details">
-                        <div class="stock-card-detail"><div class="stock-card-detail-label">Quantité</div><div class="stock-card-detail-value">${s.quantity || 0}</div></div>
-                        <div class="stock-card-detail"><div class="stock-card-detail-label">Prix unit.</div><div class="stock-card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
-                        <div class="stock-card-detail"><div class="stock-card-detail-label">Total</div><div class="stock-card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
-                        <div class="stock-card-detail"><div class="stock-card-detail-label">Stock</div><div class="stock-card-detail-value">${product ? product.stock : '-'} u.</div></div>
+                    <div class="card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
+                    <div class="card-details">
+                        <div class="card-detail"><div class="card-detail-label">Quantité</div><div class="card-detail-value">${s.quantity || 0}</div></div>
+                        <div class="card-detail"><div class="card-detail-label">Prix unit.</div><div class="card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
+                        <div class="card-detail"><div class="card-detail-label">Total</div><div class="card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
+                        <div class="card-detail"><div class="card-detail-label">Stock</div><div class="card-detail-value">${product ? product.stock : '-'} u.</div></div>
                     </div>
-                    ${s.notes ? `<div class="stock-card-notes">📝 ${escapeHtml(s.notes)}</div>` : ''}
+                    ${s.notes ? `<div class="card-notes" style="margin-top:8px; font-size:11px; color:#6B6B7B;">📝 ${escapeHtml(s.notes)}</div>` : ''}
                 </div>
             `;
         }
         cardsHtml += '</div>';
-        contentContainer.innerHTML = cardsHtml;
+        listContainer.innerHTML = cardsHtml;
     } else {
-        let tableHtml = `<div class="stock-table-wrapper"><table class="stock-table"><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
+        // Version tableau pour desktop
+        let tableHtml = `<div class="table-wrapper"><table><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
         for (let s of stock) {
             let dateStr = '-';
             if (s.date) {
@@ -1621,55 +1525,45 @@ function updateStockDisplay(stock) {
                 <td><small>${dateStr}</small></td>
                 <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
                 <td style="text-align:center;">${s.quantity || 0}</td>
-                <td>${(s.purchase_price || 0).toFixed(2)} DNT</span></td>
-                <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</span></td>
+                <td>${(s.purchase_price || 0).toFixed(2)} DNT</td>
+                <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
                 <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
                 <td>${product ? product.stock + ' unités' : '-'}</td>
                 <td><small>${escapeHtml(s.notes) || '-'}</small></td>
             </tr>`;
         }
         tableHtml += `</tbody></table></div>`;
-        contentContainer.innerHTML = tableHtml;
+        listContainer.innerHTML = tableHtml;
     }
 }
 
 function showStockInModal() {
-    Promise.all([
-        fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-        fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
-    ]).then(([productsData, suppliers]) => {
-        let products = productsData.products || [];
-        let productOptions = '<option value="">-- Sélectionner un produit --</option>';
+    fetch('/admin/products?t=' + Date.now()).then(r => r.json()).then(data => {
+        let products = data.products || [];
+        let options = '<option value="">-- Sélectionner --</option>';
         for (let p of products) {
-            productOptions += `<option value="${p.id}" data-current-stock="${p.stock || 0}" data-current-price="${(p.prix_vente || 0).toFixed(2)}">${p.name} (${p.reference}) - Stock: ${p.stock || 0}</option>`;
-        }
-        
-        let supplierOptions = '<option value="">-- Aucun fournisseur --</option>';
-        for (let s of suppliers) {
-            supplierOptions += `<option value="${s.id}">${s.name}</option>`;
+            options += `<option value="${p.id}" data-price="${(p.prix_vente || 0).toFixed(2)}">${p.name} (${p.reference}) - Stock: ${p.stock || 0}</option>`;
         }
         
         openModal('📥 Nouvelle entrée stock', `
-            <form id="stockInForm">
-                <div class="form-group"><label>Produit *</label><select name="product_id" id="productSelect" required>${productOptions}</select></div>
-                <div class="form-group"><label>Fournisseur</label><select name="supplier_id">${supplierOptions}</select></div>
+            <form id="stockForm">
+                <div class="form-group"><label>Produit *</label><select name="product_id" id="productId" required>${options}</select></div>
                 <div class="form-group"><label>Quantité *</label><input type="number" name="quantity" id="qty" required min="1" value="1"></div>
-                <div class="form-group"><label>Prix d'achat unitaire *</label><input type="number" step="0.01" name="purchase_price" id="purchasePrice" required></div>
-                <div class="form-group"><label>Prix de vente *</label><input type="number" step="0.01" name="prix_vente" id="salePrice" required></div>
+                <div class="form-group"><label>Prix d'achat (DNT) *</label><input type="number" step="0.01" name="purchase_price" id="buyPrice" required></div>
+                <div class="form-group"><label>Prix de vente (DNT) *</label><input type="number" step="0.01" name="prix_vente" id="sellPrice" required></div>
                 <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
                 <button type="submit" class="btn btn-success">Valider</button>
             </form>
         `);
         
-        document.getElementById('productSelect').addEventListener('change', function() {
-            let opt = this.options[this.selectedIndex];
-            let price = opt.getAttribute('data-current-price');
-            if (price && !document.getElementById('salePrice').value) {
-                document.getElementById('salePrice').value = price;
+        document.getElementById('productId').onchange = function() {
+            let price = this.options[this.selectedIndex].getAttribute('data-price');
+            if (price && !document.getElementById('sellPrice').value) {
+                document.getElementById('sellPrice').value = price;
             }
-        });
+        };
         
-        document.getElementById('stockInForm').onsubmit = async (e) => {
+        document.getElementById('stockForm').onsubmit = async (e) => {
             e.preventDefault();
             let fd = new FormData(e.target);
             let res = await fetch('/admin/stock-in', { method: 'POST', body: fd });
@@ -1700,10 +1594,10 @@ function showToast(msg, type) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-window.addEventListener('resize', function() {
-    if (window.allStockData) updateStockDisplay(window.allStockData);
+window.addEventListener('resize', () => {
+    if (window.allStockData) updateDisplay(window.allStockData);
 });
-// ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
+    // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
