@@ -1537,7 +1537,6 @@ async function loadStockIn() {
         let firstDayStr = firstDayOfMonth.toISOString().split('T')[0];
         let todayStr = today.toISOString().split('T')[0];
     
-        // Appliquer les dates par défaut
         let startDateInput = document.getElementById('filterStartDate');
         let endDateInput = document.getElementById('filterEndDate');
     
@@ -1547,10 +1546,9 @@ async function loadStockIn() {
         if (endDateInput) {
             endDateInput.value = todayStr;
         }
-        // Afficher les données initiales
+    
+        applyStockInFilters();
         displayFilteredStock(stock);
-        
-        // Ajouter un listener pour redimensionnement
         window.addEventListener('resize', function() {
             let wasMobile = window.innerWidth <= 768;
             if (wasMobile !== isMobile && window.allStockData) {
