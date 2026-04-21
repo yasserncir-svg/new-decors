@@ -1225,13 +1225,13 @@ async function viewOrder(id) {
         <button class="btn btn-primary mt-3" onclick="closeModal()">Fermer</button>
     `);
 }
-// ========== ENTRÉES STOCK AVEC FILTRES ==========
 // ========== ENTRÉES STOCK COMPLET ==========
 
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
-    document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
+    let isAdmin = '{{ session.role }}' === 'admin';
     
+    document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
         let [stock, products, suppliers] = await Promise.all([
             fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json()),
@@ -1239,12 +1239,24 @@ async function loadStockIn() {
             fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
         ]);
         
+        console.log('Stock reçu:', stock);
+        
         window.stockProducts = products.products || [];
-        window.allStockData = stock;
         window.stockSuppliers = suppliers;
+        window.allStockData = stock;
+        
+        let totalQuantity = stock.reduce((s, i) => s + (i.quantity || 0), 0);
+        let totalAmount = stock.reduce((s, i) => s + (i.total || 0), 0);
+        let isMobile = window.innerWidth <= 768;
         
         let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
         let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
+        
+        let productOptions = '<option value="">📦 Tous les produits</option>';
+        for (let p of uniqueProducts) productOptions += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
+        
+        let supplierOptions = '<option value="">🏭 Tous les fournisseurs</option>';
+        for (let s of uniqueSuppliers) supplierOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
         
         let html = `
             <style>
@@ -1446,15 +1458,13 @@ async function loadStockIn() {
                         <div class="filter-group">
                             <label>📦 Produit</label>
                             <select id="filterProduct" onchange="applyStockFilters()">
-                                <option value="">Tous les produits</option>
-                                ${uniqueProducts.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+                                ${productOptions}
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>🏭 Fournisseur</label>
                             <select id="filterSupplier" onchange="applyStockFilters()">
-                                <option value="">Tous les fournisseurs</option>
-                                ${uniqueSuppliers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                                ${supplierOptions}
                             </select>
                         </div>
                         <div>
@@ -1472,7 +1482,7 @@ async function loadStockIn() {
         applyStockFilters();
         
     } catch(e) {
-        console.error(e);
+        console.error('Erreur loadStockIn:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-danger">❌ Erreur de chargement</div></div>';
     }
 }
@@ -1551,12 +1561,7 @@ function updateStockDisplay(stock) {
             <div class="stock-stat-number">${totalQty}</div>
             <div class="stock-stat-label">Articles</div>
         </div>
-        ${isAdmin ? `
-        <div class="stock-stat-card">
-            <div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div>
-            <div class="stock-stat-label">Investissement</div>
-        </div>
-        ` : ''}
+        ${isAdmin ? `<div class="stock-stat-card"><div class="stock-stat-number">${totalAmount.toFixed(2)} DNT</div><div class="stock-stat-label">Investissement</div></div>` : ''}
     `;
     document.getElementById('stockStats').innerHTML = statsHtml;
     
@@ -1573,35 +1578,29 @@ function displayStockTable(stock) {
         return;
     }
     
-    let html = `
-        <div class="stock-table-wrapper">
-            <table class="stock-table">
-                <thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead>
-                <tbody>
-                    ${stock.map(s => {
-                        let dateStr = '-';
-                        if (s.date) {
-                            let d = new Date(s.date);
-                            if (!isNaN(d.getTime())) {
-                                dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
-                            }
-                        }
-                        let product = window.stockProducts.find(p => p.id == s.product_id);
-                        return `<tr>
-                            <td><small>${dateStr}</small></td>
-                            <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
-                            <td style="text-align:center; font-weight:700;">${s.quantity || 0}</td>
-                            <td>${(s.purchase_price || 0).toFixed(2)} DNT</td>
-                            <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
-                            <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
-                            <td>${product ? product.stock + ' unités' : '-'}</td>
-                            <td><small>${escapeHtml(s.notes) || '-'}</small></td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
+    let html = `<div class="stock-table-wrapper"><table class="stock-table"><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
+    
+    for (let s of stock) {
+        let dateStr = '-';
+        if (s.date) {
+            let d = new Date(s.date);
+            if (!isNaN(d.getTime())) {
+                dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+            }
+        }
+        let product = window.stockProducts.find(p => p.id == s.product_id);
+        html += `<tr>
+            <td><small>${dateStr}</small></td>
+            <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+            <td style="text-align:center; font-weight:700;">${s.quantity || 0}</td>
+            <td>${(s.purchase_price || 0).toFixed(2)} DNT</td>
+            <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
+            <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
+            <td>${product ? product.stock + ' unités' : '-'}</td>
+            <td><small>${escapeHtml(s.notes) || '-'}</small></td>
+        </tr>`;
+    }
+    html += `</tbody></table></div>`;
     document.getElementById('stockContent').innerHTML = html;
 }
 
@@ -1621,7 +1620,6 @@ function displayStockCards(stock) {
             }
         }
         let product = window.stockProducts.find(p => p.id == s.product_id);
-        
         html += `
             <div class="stock-card">
                 <div class="stock-card-header">
@@ -1644,9 +1642,7 @@ function displayStockCards(stock) {
 }
 
 window.addEventListener('resize', function() {
-    if (window.allStockData) {
-        updateStockDisplay(window.allStockData);
-    }
+    if (window.allStockData) updateStockDisplay(window.allStockData);
 });
 
 function escapeHtml(text) {
@@ -1654,6 +1650,14 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function showToast(msg, type) {
+    let toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // ========== MODAL POUR AJOUTER UNE ENTRÉE STOCK ==========
@@ -1767,15 +1771,11 @@ function showStockInModal() {
                 let select = productSelect;
                 let opt = select.options[select.selectedIndex];
                 if (select.value && opt) {
-                    let ref = opt.getAttribute('data-ref') || '-';
-                    let currentStock = opt.getAttribute('data-current-stock') || 0;
-                    let currentPrice = opt.getAttribute('data-current-price') || 0;
-                    productRefSpan.innerHTML = ref;
-                    currentStockSpan.innerHTML = currentStock;
-                    currentPriceSpan.innerHTML = currentPrice;
-                    
-                    if (currentPrice > 0 && !salePrice.value) {
-                        salePrice.value = parseFloat(currentPrice).toFixed(2);
+                    productRefSpan.innerHTML = opt.getAttribute('data-ref') || '-';
+                    currentStockSpan.innerHTML = opt.getAttribute('data-current-stock') || 0;
+                    currentPriceSpan.innerHTML = opt.getAttribute('data-current-price') || 0;
+                    if (currentPriceSpan.innerHTML > 0 && !salePrice.value) {
+                        salePrice.value = parseFloat(currentPriceSpan.innerHTML).toFixed(2);
                     }
                 }
             }
@@ -1806,14 +1806,6 @@ function showStockInModal() {
                     showToast('✅ Entrée stock enregistrée', 'success');
                     closeModal();
                     await loadStockIn();
-                    await loadProducts();
-                    
-                    if (result.product) {
-                        let productIndex = window.stockProducts.findIndex(p => p.id == result.product.id);
-                        if (productIndex !== -1) {
-                            window.stockProducts[productIndex] = result.product;
-                        }
-                    }
                 } else {
                     showToast('❌ Erreur: ' + (result.error || 'Inconnue'), 'error');
                     submitBtn.disabled = false;
