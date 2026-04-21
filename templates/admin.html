@@ -1556,6 +1556,7 @@ async function loadStockIn() {
 }
 
 // Fonction pour appliquer les filtres
+// Fonction pour appliquer les filtres
 function applyStockFilters() {
     // Vérification de sécurité : si les éléments n'existent pas, on sort
     let startDateInput = document.getElementById('filterStartDate');
@@ -1570,13 +1571,53 @@ function applyStockFilters() {
         return;
     }
     
-    // Le reste de ton code...
+    // Récupérer les valeurs des filtres
     let startDate = startDateInput.value;
     let endDate = endDateInput.value;
     let productName = document.getElementById('filterProduct')?.value || '';
     let supplierName = document.getElementById('filterSupplier')?.value || '';
     
-    // ... suite
+    // Vérifier que les données existent
+    if (!window.allStockData) {
+        console.error("window.allStockData n'existe pas");
+        return;
+    }
+    
+    // Copier les données
+    let filtered = [...window.allStockData];
+    
+    // Filtre par date début
+    if (startDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate >= startDate;
+        });
+    }
+    
+    // Filtre par date fin
+    if (endDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            let itemDate = s.date.split(' ')[0];
+            return itemDate <= endDate;
+        });
+    }
+    
+    // Filtre par produit
+    if (productName) {
+        filtered = filtered.filter(s => s.product_name === productName);
+    }
+    
+    // Filtre par fournisseur
+    if (supplierName) {
+        filtered = filtered.filter(s => s.supplier_name === supplierName);
+    }
+    
+    console.log("Données filtrées:", filtered.length);
+    
+    // Afficher les résultats filtrés
+    displayFilteredStock(filtered);
 }
 
 function resetStockFilters() {
