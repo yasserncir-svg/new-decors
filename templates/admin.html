@@ -1562,10 +1562,6 @@ async function loadStockIn() {
     }
 }
 
-// ========== FONCTIONS DE FILTRAGE ==========
-
-// ========== FONCTIONS POUR ENTRÉES STOCK ==========
-
 function applyStockInFilters() {
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
@@ -1576,7 +1572,12 @@ function applyStockInFilters() {
     
     let filtered = [...window.allStockData];
     
-    // ⚠️ APPLIQUER LES FILTRES SEULEMENT SI LES VALEURS EXISTENT ⚠️
+    // Normaliser une chaîne (enlever accents, minuscules)
+    function normalize(str) {
+        if (!str) return '';
+        return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    
     if (startDate && startDate !== '') {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
@@ -1594,18 +1595,23 @@ function applyStockInFilters() {
     }
     
     if (productName && productName !== '') {
-        filtered = filtered.filter(s => s.product_name === productName);
+        let normalizedProduct = normalize(productName);
+        filtered = filtered.filter(s => {
+            return normalize(s.product_name) === normalizedProduct;
+        });
     }
     
     if (supplierName && supplierName !== '') {
-        filtered = filtered.filter(s => s.supplier_name === supplierName);
+        let normalizedSupplier = normalize(supplierName);
+        filtered = filtered.filter(s => {
+            return normalize(s.supplier_name) === normalizedSupplier;
+        });
     }
     
     console.log("Données filtrées:", filtered.length);
     
     displayFilteredStock(filtered);
 }
-
 function resetStockInFilters() {
     let startDate = document.getElementById('filterStartDate');
     let endDate = document.getElementById('filterEndDate');
