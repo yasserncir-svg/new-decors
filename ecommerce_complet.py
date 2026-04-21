@@ -6495,7 +6495,7 @@ def admin_stock_in():
     conn.close()
     return jsonify(stock)
 
-from datetime import datetime  # Ajoute cette ligne en haut du fichier si pas déjà présente
+from datetime import datetime 
 
 @app.route('/admin/stock-in', methods=['POST'])
 @login_required
