@@ -1225,136 +1225,79 @@ async function viewOrder(id) {
         <button class="btn btn-primary mt-3" onclick="closeModal()">Fermer</button>
     `);
 }
-// ========== ENTRÉES STOCK SIMPLIFIÉE ET CORRIGÉE ==========
+// ========== VARIABLES GLOBALES ==========
+let cachedProducts = null;
+let cachedSuppliers = null;
 
+// ========== CHARGEMENT DES DONNÉES AU DÉMARRAGE ==========
+async function loadStockData() {
+    try {
+        let [products, suppliers] = await Promise.all([
+            fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
+            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
+        ]);
+        cachedProducts = products.products || [];
+        cachedSuppliers = suppliers;
+        console.log('✅ Données chargées en cache');
+    } catch(e) {
+        console.error('Erreur chargement cache:', e);
+    }
+}
+
+// ========== ENTRÉES STOCK PRINCIPALE ==========
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
     
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     
     try {
-        let [stock, products] = await Promise.all([
-            fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/products?t=' + Date.now()).then(r => r.json())
-        ]);
+        let stock = await fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json());
         
-        window.stockProducts = products.products || [];
         window.allStockData = stock;
         
-        // Générer le HTML complet
+        let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
+        let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
+        
         let html = `
             <style>
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: 15px;
-                    margin-bottom: 25px;
-                }
-                .stat-card {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 15px;
-                    text-align: center;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                }
-                .stat-number {
-                    font-size: 24px;
-                    font-weight: 800;
-                    color: #DB2777;
-                }
-                .stat-label {
-                    color: #6B6B7B;
-                    font-size: 12px;
-                    margin-top: 5px;
-                }
-                .filters-bar {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 15px;
-                    margin: 20px 0;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 15px;
-                    align-items: flex-end;
-                }
-                .filter-group {
-                    flex: 1;
-                    min-width: 140px;
-                }
-                .filter-group label {
-                    display: block;
-                    font-size: 12px;
-                    font-weight: 600;
-                    margin-bottom: 5px;
-                    color: #6B6B7B;
-                }
-                .filter-group input, .filter-group select {
-                    width: 100%;
-                    padding: 10px 12px;
-                    border: 1px solid #ddd;
-                    border-radius: 10px;
-                }
-                .btn-reset {
-                    padding: 10px 20px;
-                    background: #f0f0f0;
-                    border: none;
-                    border-radius: 10px;
-                    cursor: pointer;
-                }
-                .table-wrapper {
-                    overflow-x: auto;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 13px;
-                }
-                th {
-                    background: #FDF2F8;
-                    padding: 12px;
-                    text-align: left;
-                    border-bottom: 2px solid #FF69B4;
-                }
-                td {
-                    padding: 10px 12px;
-                    border-bottom: 1px solid #eee;
-                }
-                .cards-container {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                }
-                .card-item {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 15px;
-                    border: 1px solid #eee;
-                }
-                .card-header {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
-                    padding-bottom: 8px;
-                    border-bottom: 1px solid #eee;
-                }
-                .card-date { font-weight: 700; color: #DB2777; }
-                .card-supplier { font-size: 11px; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; }
+                .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+                .stat-card { background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+                .stat-number { font-size: 24px; font-weight: 800; color: #DB2777; }
+                .stat-label { color: #6B6B7B; font-size: 12px; margin-top: 5px; }
+                .filters-bar { background: white; border-radius: 16px; padding: 15px; margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+                .filter-group { flex: 1; min-width: 140px; }
+                .filter-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #6B6B7B; }
+                .filter-group input, .filter-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; }
+                .btn-reset { padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
+                .btn-reset:hover { background: #e0e0e0; }
+                .table-wrapper { overflow-x: auto; }
+                table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+                th { background: #FDF2F8; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #FF69B4; }
+                td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+                .cards-container { display: flex; flex-direction: column; gap: 12px; }
+                .card-item { background: white; border-radius: 16px; padding: 15px; border: 1px solid #eee; }
+                .card-header { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 8px; }
+                .card-date { font-weight: 700; color: #DB2777; font-size: 12px; }
+                .card-supplier { font-size: 11px; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; color: #2e7d32; }
                 .card-product { font-weight: 700; font-size: 15px; margin-bottom: 12px; }
                 .card-details { display: flex; flex-wrap: wrap; gap: 10px; }
-                .card-detail { flex: 1; background: #f8f9fa; padding: 8px; border-radius: 10px; text-align: center; }
-                .card-detail-label { font-size: 10px; color: #6B6B7B; }
+                .card-detail { flex: 1; min-width: 70px; background: #f8f9fa; padding: 8px; border-radius: 10px; text-align: center; }
+                .card-detail-label { font-size: 10px; color: #6B6B7B; margin-bottom: 4px; }
                 .card-detail-value { font-weight: 700; font-size: 14px; }
+                .card-notes { margin-top: 8px; font-size: 11px; color: #6B6B7B; padding-top: 8px; border-top: 1px solid #eee; }
                 @media (max-width: 768px) {
                     .stats-grid { grid-template-columns: repeat(2, 1fr); }
                     .filters-bar { flex-direction: column; }
                     .filter-group { width: 100%; }
                     .btn-reset { width: 100%; text-align: center; }
+                    .table-wrapper { display: none; }
                 }
+                @media (min-width: 769px) { .cards-container { display: none; } }
             </style>
             
             <div class="card">
-                <div class="card-header" style="justify-content: space-between;">
-                    <h2>📥 Entrées stock</h2>
+                <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <h2 style="margin:0;"><i class="fas fa-arrow-down" style="color: #27ae60;"></i> Entrées stock</h2>
                     <button class="btn btn-success" onclick="showStockInModal()">➕ Nouvelle entrée</button>
                 </div>
                 
@@ -1371,25 +1314,32 @@ async function loadStockIn() {
                         <label>📦 Produit</label>
                         <select id="filterProduct">
                             <option value="">Tous les produits</option>
-                            ${[...new Set(stock.map(s => s.product_name).filter(Boolean))].map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+                            ${uniqueProducts.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="filter-group">
                         <label>🏭 Fournisseur</label>
                         <select id="filterSupplier">
                             <option value="">Tous les fournisseurs</option>
-                            ${[...new Set(stock.map(s => s.supplier_name).filter(Boolean))].map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                            ${uniqueSuppliers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
                         </select>
                     </div>
                     <button class="btn-reset" onclick="resetFilters()">🔄 Réinitialiser</button>
                 </div>
                 
                 <div id="statsContainer" class="stats-grid"></div>
-                <div id="listContainer"></div>
+                <div id="tableContainer" class="table-wrapper"></div>
+                <div id="cardsContainer" class="cards-container"></div>
             </div>
         `;
         
         document.getElementById('dynamicContent').innerHTML = html;
+        
+        // Définir les dates par défaut (mois en cours)
+        let today = new Date();
+        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('filterStartDate').value = firstDay.toISOString().split('T')[0];
+        document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
         
         // Attacher les événements
         document.getElementById('filterStartDate').onchange = () => applyFilters();
@@ -1399,7 +1349,6 @@ async function loadStockIn() {
         document.getElementById('filterProduct').onchange = () => applyFilters();
         document.getElementById('filterSupplier').onchange = () => applyFilters();
         
-        // Afficher les données
         applyFilters();
         
     } catch(e) {
@@ -1441,16 +1390,12 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    let startDate = document.getElementById('filterStartDate');
-    let endDate = document.getElementById('filterEndDate');
-    let productSelect = document.getElementById('filterProduct');
-    let supplierSelect = document.getElementById('filterSupplier');
-    
-    if (startDate) startDate.value = '';
-    if (endDate) endDate.value = '';
-    if (productSelect) productSelect.value = '';
-    if (supplierSelect) supplierSelect.value = '';
-    
+    let today = new Date();
+    let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('filterStartDate').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
+    document.getElementById('filterProduct').value = '';
+    document.getElementById('filterSupplier').value = '';
     applyFilters();
 }
 
@@ -1461,7 +1406,6 @@ function updateDisplay(stock) {
     let totalQty = stock.reduce((s, i) => s + (i.quantity || 0), 0);
     let totalAmount = stock.reduce((s, i) => s + (i.total || 0), 0);
     
-    // Mettre à jour les stats
     let statsHtml = `
         <div class="stat-card"><div class="stat-number">${stock.length}</div><div class="stat-label">Entrées</div></div>
         <div class="stat-card"><div class="stat-number">${totalQty}</div><div class="stat-label">Articles</div></div>
@@ -1469,116 +1413,191 @@ function updateDisplay(stock) {
     `;
     document.getElementById('statsContainer').innerHTML = statsHtml;
     
-    // Afficher la liste
-    let listContainer = document.getElementById('listContainer');
-    if (!listContainer) return;
-    
     if (stock.length === 0) {
-        listContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        document.getElementById('tableContainer').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        document.getElementById('cardsContainer').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
         return;
     }
     
-    if (isMobile) {
-        // Version cartes pour mobile
-        let cardsHtml = '<div class="cards-container">';
-        for (let s of stock) {
-            let dateStr = '-';
-            if (s.date) {
-                let d = new Date(s.date);
-                if (!isNaN(d.getTime())) {
-                    dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
-                }
-            }
-            let product = window.stockProducts.find(p => p.id == s.product_id);
-            cardsHtml += `
-                <div class="card-item">
-                    <div class="card-header">
-                        <span class="card-date">📅 ${dateStr}</span>
-                        ${s.supplier_name ? `<span class="card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
-                    </div>
-                    <div class="card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
-                    <div class="card-details">
-                        <div class="card-detail"><div class="card-detail-label">Quantité</div><div class="card-detail-value">${s.quantity || 0}</div></div>
-                        <div class="card-detail"><div class="card-detail-label">Prix unit.</div><div class="card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
-                        <div class="card-detail"><div class="card-detail-label">Total</div><div class="card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
-                        <div class="card-detail"><div class="card-detail-label">Stock</div><div class="card-detail-value">${product ? product.stock : '-'} u.</div></div>
-                    </div>
-                    ${s.notes ? `<div class="card-notes" style="margin-top:8px; font-size:11px; color:#6B6B7B;">📝 ${escapeHtml(s.notes)}</div>` : ''}
+    // Version tableau (desktop)
+    let tableHtml = `<table><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
+    for (let s of stock) {
+        let dateStr = formatDateTime(s.date);
+        let product = window.stockProducts.find(p => p.id == s.product_id);
+        tableHtml += `<tr>
+            <td><small>${dateStr}</small></td>
+            <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+            <td style="text-align:center;">${s.quantity || 0}</td>
+            <td>${(s.purchase_price || 0).toFixed(2)} DNT</span></td>
+            <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</span></td>
+            <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
+            <td>${product ? product.stock + ' unités' : '-'}</td>
+            <td><small>${escapeHtml(s.notes) || '-'}</small></td>
+        </tr>`;
+    }
+    tableHtml += `</tbody></table>`;
+    document.getElementById('tableContainer').innerHTML = tableHtml;
+    
+    // Version cartes (mobile)
+    let cardsHtml = '';
+    for (let s of stock) {
+        let dateStr = formatDateTime(s.date);
+        let product = window.stockProducts.find(p => p.id == s.product_id);
+        cardsHtml += `
+            <div class="card-item">
+                <div class="card-header">
+                    <span class="card-date">📅 ${dateStr}</span>
+                    ${s.supplier_name ? `<span class="card-supplier">🏭 ${escapeHtml(s.supplier_name)}</span>` : ''}
                 </div>
-            `;
-        }
-        cardsHtml += '</div>';
-        listContainer.innerHTML = cardsHtml;
+                <div class="card-product">📦 ${escapeHtml(s.product_name || '-')}</div>
+                <div class="card-details">
+                    <div class="card-detail"><div class="card-detail-label">Quantité</div><div class="card-detail-value">${s.quantity || 0}</div></div>
+                    <div class="card-detail"><div class="card-detail-label">Prix unit.</div><div class="card-detail-value">${(s.purchase_price || 0).toFixed(2)} DNT</div></div>
+                    <div class="card-detail"><div class="card-detail-label">Total</div><div class="card-detail-value" style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</div></div>
+                    <div class="card-detail"><div class="card-detail-label">Stock</div><div class="card-detail-value">${product ? product.stock : '-'} u.</div></div>
+                </div>
+                ${s.notes ? `<div class="card-notes">📝 ${escapeHtml(s.notes)}</div>` : ''}
+            </div>
+        `;
+    }
+    document.getElementById('cardsContainer').innerHTML = cardsHtml;
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    let d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ========== MODAL AJOUT ENTRÉE STOCK ==========
+function showStockInModal() {
+    if (!cachedProducts) {
+        showToast('Chargement des données...', 'info');
+        loadStockData().then(() => showStockInModalForm());
     } else {
-        // Version tableau pour desktop
-        let tableHtml = `<div class="table-wrapper"><table><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
-        for (let s of stock) {
-            let dateStr = '-';
-            if (s.date) {
-                let d = new Date(s.date);
-                if (!isNaN(d.getTime())) {
-                    dateStr = d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
-                }
-            }
-            let product = window.stockProducts.find(p => p.id == s.product_id);
-            tableHtml += `<tr>
-                <td><small>${dateStr}</small></td>
-                <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
-                <td style="text-align:center;">${s.quantity || 0}</td>
-                <td>${(s.purchase_price || 0).toFixed(2)} DNT</td>
-                <td style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</td>
-                <td>${s.supplier_name ? '<i class="fas fa-building"></i> ' + escapeHtml(s.supplier_name) : '-'}</td>
-                <td>${product ? product.stock + ' unités' : '-'}</td>
-                <td><small>${escapeHtml(s.notes) || '-'}</small></td>
-            </tr>`;
-        }
-        tableHtml += `</tbody></table></div>`;
-        listContainer.innerHTML = tableHtml;
+        showStockInModalForm();
     }
 }
 
-function showStockInModal() {
-    fetch('/admin/products?t=' + Date.now()).then(r => r.json()).then(data => {
-        let products = data.products || [];
-        let options = '<option value="">-- Sélectionner --</option>';
-        for (let p of products) {
-            options += `<option value="${p.id}" data-price="${(p.prix_vente || 0).toFixed(2)}">${p.name} (${p.reference}) - Stock: ${p.stock || 0}</option>`;
-        }
-        
-        openModal('📥 Nouvelle entrée stock', `
-            <form id="stockForm">
-                <div class="form-group"><label>Produit *</label><select name="product_id" id="productId" required>${options}</select></div>
-                <div class="form-group"><label>Quantité *</label><input type="number" name="quantity" id="qty" required min="1" value="1"></div>
-                <div class="form-group"><label>Prix d'achat (DNT) *</label><input type="number" step="0.01" name="purchase_price" id="buyPrice" required></div>
-                <div class="form-group"><label>Prix de vente (DNT) *</label><input type="number" step="0.01" name="prix_vente" id="sellPrice" required></div>
-                <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
-                <button type="submit" class="btn btn-success">Valider</button>
-            </form>
-        `);
-        
-        document.getElementById('productId').onchange = function() {
-            let price = this.options[this.selectedIndex].getAttribute('data-price');
-            if (price && !document.getElementById('sellPrice').value) {
-                document.getElementById('sellPrice').value = price;
+function showStockInModalForm() {
+    let productOptions = '<option value="">-- Sélectionner un produit --</option>';
+    for (let p of cachedProducts) {
+        productOptions += `<option value="${p.id}" data-price="${(p.prix_vente || 0).toFixed(2)}" data-stock="${p.stock || 0}">
+            ${escapeHtml(p.name)} (${p.reference}) - Stock: ${p.stock || 0}
+        </option>`;
+    }
+    
+    let supplierOptions = '<option value="">-- Aucun fournisseur --</option>';
+    for (let s of cachedSuppliers) {
+        supplierOptions += `<option value="${s.id}">${escapeHtml(s.name)}</option>`;
+    }
+    
+    openModal('📥 Nouvelle entrée stock', `
+        <style>
+            .form-group { margin-bottom: 15px; }
+            .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #333; }
+            .form-group input, .form-group select, .form-group textarea { 
+                width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
             }
-        };
+            .form-group input:focus, .form-group select:focus { outline: none; border-color: #FF69B4; }
+            .total-preview { background: #e8f5e9; padding: 12px; border-radius: 10px; text-align: center; margin: 15px 0; }
+            .total-preview span { font-size: 20px; font-weight: 800; color: #2e7d32; }
+        </style>
         
-        document.getElementById('stockForm').onsubmit = async (e) => {
-            e.preventDefault();
-            let fd = new FormData(e.target);
+        <form id="stockForm">
+            <div class="form-group">
+                <label>📦 Produit *</label>
+                <select name="product_id" id="productId" required>${productOptions}</select>
+            </div>
+            <div class="form-group">
+                <label>🏭 Fournisseur</label>
+                <select name="supplier_id">${supplierOptions}</select>
+            </div>
+            <div class="form-group">
+                <label>📦 Quantité achetée *</label>
+                <input type="number" name="quantity" id="qty" required min="1" value="1">
+            </div>
+            <div class="form-group">
+                <label>💰 Prix d'achat unitaire (DNT) *</label>
+                <input type="number" step="0.01" name="purchase_price" id="buyPrice" required placeholder="Prix d'achat">
+            </div>
+            <div class="form-group">
+                <label>💵 Prix de vente unitaire (DNT) *</label>
+                <input type="number" step="0.01" name="prix_vente" id="sellPrice" required placeholder="Prix de vente">
+            </div>
+            <div class="total-preview">
+                💰 Investissement total: <span id="totalAmount">0.00 DNT</span>
+            </div>
+            <div class="form-group">
+                <label>📝 Notes</label>
+                <textarea name="notes" rows="2" placeholder="N° facture, commentaires..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn btn-success" style="flex:1;">✅ Valider l'entrée</button>
+                <button type="button" class="btn" onclick="closeModal()">Annuler</button>
+            </div>
+        </form>
+    `);
+    
+    // Attacher les événements
+    let qty = document.getElementById('qty');
+    let buyPrice = document.getElementById('buyPrice');
+    let totalSpan = document.getElementById('totalAmount');
+    let productSelect = document.getElementById('productId');
+    let sellPrice = document.getElementById('sellPrice');
+    
+    function updateTotal() {
+        let q = parseInt(qty?.value) || 0;
+        let price = parseFloat(buyPrice?.value) || 0;
+        if (totalSpan) totalSpan.innerHTML = (q * price).toFixed(2) + ' DNT';
+    }
+    
+    if (qty) qty.addEventListener('input', updateTotal);
+    if (buyPrice) buyPrice.addEventListener('input', updateTotal);
+    
+    if (productSelect) {
+        productSelect.addEventListener('change', function() {
+            let opt = this.options[this.selectedIndex];
+            let price = opt.getAttribute('data-price');
+            if (price && price > 0 && (!sellPrice.value || sellPrice.value === '0')) {
+                sellPrice.value = price;
+            }
+        });
+    }
+    
+    document.getElementById('stockForm').onsubmit = async (e) => {
+        e.preventDefault();
+        let submitBtn = e.target.querySelector('button[type="submit"]');
+        let originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+        
+        let fd = new FormData(e.target);
+        
+        try {
             let res = await fetch('/admin/stock-in', { method: 'POST', body: fd });
             let result = await res.json();
+            
             if (result.success) {
-                showToast('✅ Entrée enregistrée', 'success');
+                showToast('✅ Entrée stock enregistrée', 'success');
                 closeModal();
                 loadStockIn();
+                loadStockData();
             } else {
-                showToast('❌ Erreur', 'error');
+                showToast('❌ Erreur: ' + (result.error || 'Inconnue'), 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
             }
-        };
-    });
+        } catch(err) {
+            showToast('❌ Erreur réseau', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    };
 }
 
+// ========== UTILITAIRES ==========
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -1589,6 +1608,7 @@ function escapeHtml(text) {
 function showToast(msg, type) {
     let toast = document.createElement('div');
     toast.className = 'toast-notification';
+    toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#333; color:white; padding:12px 20px; border-radius:8px; z-index:9999;';
     toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
@@ -1597,6 +1617,10 @@ function showToast(msg, type) {
 window.addEventListener('resize', () => {
     if (window.allStockData) updateDisplay(window.allStockData);
 });
+
+// ========== INITIALISATION ==========
+loadStockData();
+
     // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
