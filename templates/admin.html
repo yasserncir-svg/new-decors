@@ -1501,26 +1501,26 @@ async function loadStockIn() {
                     <div class="filters-row">
                         <div class="filter-group">
                             <label><i class="fas fa-calendar"></i> Date début</label>
-                            <input type="date" id="filterStartDate" onchange="applyStockFilters()" oninput="applyStockFilters()">
+                            <input type="date" id="filterStartDate" onchange="applyStockInFilters()" oninput="applyStockInFilters()">
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-calendar"></i> Date fin</label>
-                            <input type="date" id="filterEndDate" onchange="applyStockFilters()" oninput="applyStockFilters()">
+                            <input type="date" id="filterEndDate" onchange="applyStockInFilters()" oninput="applyStockInFilters()">
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-box"></i> Produit</label>
-                            <select id="filterProduct" onchange="applyStockFilters()">
+                            <select id="filterProduct" onchange="applyStockInFilters()">
                                 ${productOptions}
                             </select>
                         </div>
                         <div class="filter-group">
                             <label><i class="fas fa-building"></i> Fournisseur</label>
-                            <select id="filterSupplier" onchange="applyStockFilters()">
+                            <select id="filterSupplier" onchange="applyStockInFilters()">
                                 ${supplierOptions}
                             </select>
                         </div>
                         <div>
-                            <button class="btn-reset" onclick="resetStockFilters()">
+                            <button class="btn-reset" onclick="resetStockInFilters()">
                                 <i class="fas fa-undo"></i> Réinitialiser
                             </button>
                         </div>
@@ -1552,7 +1552,9 @@ async function loadStockIn() {
 
 // ========== FONCTIONS DE FILTRAGE ==========
 
-function applyStockFilters() {
+// ========== FONCTIONS POUR ENTRÉES STOCK ==========
+
+function applyStockInFilters() {
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
     let productName = document.getElementById('filterProduct')?.value || '';
@@ -1587,7 +1589,7 @@ function applyStockFilters() {
     displayFilteredStock(filtered);
 }
 
-function resetStockFilters() {
+function resetStockInFilters() {
     let startDate = document.getElementById('filterStartDate');
     let endDate = document.getElementById('filterEndDate');
     let productSelect = document.getElementById('filterProduct');
@@ -1602,7 +1604,6 @@ function resetStockFilters() {
         displayFilteredStock(window.allStockData);
     }
 }
-
 function displayFilteredStock(stock) {
     let isAdmin = '{{ session.role }}' === 'admin';
     let isMobile = window.innerWidth <= 768;
