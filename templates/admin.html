@@ -1244,6 +1244,26 @@ async function loadStockData() {
     }
 }
 
+// ========== VARIABLES GLOBALES ==========
+let cachedProducts = null;
+let cachedSuppliers = null;
+
+// ========== CHARGEMENT DES DONNÉES AU DÉMARRAGE ==========
+async function loadStockData() {
+    try {
+        let [products, suppliers] = await Promise.all([
+            fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
+            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
+        ]);
+        cachedProducts = products.products || [];
+        cachedSuppliers = suppliers;
+        window.stockProducts = cachedProducts;
+        console.log('✅ Données chargées en cache');
+    } catch(e) {
+        console.error('Erreur chargement cache:', e);
+    }
+}
+
 // ========== ENTRÉES STOCK PRINCIPALE ==========
 async function loadStockIn() {
     history.pushState(null, '', '?tab=stock-in');
@@ -1254,6 +1274,7 @@ async function loadStockIn() {
         let stock = await fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json());
         
         window.allStockData = stock;
+        window.stockProducts = cachedProducts || [];
         
         let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
         let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
@@ -1327,9 +1348,9 @@ async function loadStockIn() {
                     <button class="btn-reset" onclick="resetFilters()">🔄 Réinitialiser</button>
                 </div>
                 
-                <div id="statsContainer" class="stats-grid"></div>
-                <div id="tableContainer" class="table-wrapper"></div>
-                <div id="cardsContainer" class="cards-container"></div>
+                <div id="stockStatsContainer" class="stats-grid"></div>
+                <div id="stockTableContainer" class="table-wrapper"></div>
+                <div id="stockCardsContainer" class="cards-container"></div>
             </div>
         `;
         
@@ -1338,16 +1359,25 @@ async function loadStockIn() {
         // Définir les dates par défaut (mois en cours)
         let today = new Date();
         let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        document.getElementById('filterStartDate').value = firstDay.toISOString().split('T')[0];
-        document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
+        let startDateInput = document.getElementById('filterStartDate');
+        let endDateInput = document.getElementById('filterEndDate');
+        
+        if (startDateInput) startDateInput.value = firstDay.toISOString().split('T')[0];
+        if (endDateInput) endDateInput.value = today.toISOString().split('T')[0];
         
         // Attacher les événements
-        document.getElementById('filterStartDate').onchange = () => applyFilters();
-        document.getElementById('filterStartDate').oninput = () => applyFilters();
-        document.getElementById('filterEndDate').onchange = () => applyFilters();
-        document.getElementById('filterEndDate').oninput = () => applyFilters();
-        document.getElementById('filterProduct').onchange = () => applyFilters();
-        document.getElementById('filterSupplier').onchange = () => applyFilters();
+        if (startDateInput) {
+            startDateInput.onchange = () => applyFilters();
+            startDateInput.oninput = () => applyFilters();
+        }
+        if (endDateInput) {
+            endDateInput.onchange = () => applyFilters();
+            endDateInput.oninput = () => applyFilters();
+        }
+        let filterProduct = document.getElementById('filterProduct');
+        let filterSupplier = document.getElementById('filterSupplier');
+        if (filterProduct) filterProduct.onchange = () => applyFilters();
+        if (filterSupplier) filterSupplier.onchange = () => applyFilters();
         
         applyFilters();
         
@@ -1392,10 +1422,16 @@ function applyFilters() {
 function resetFilters() {
     let today = new Date();
     let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    document.getElementById('filterStartDate').value = firstDay.toISOString().split('T')[0];
-    document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
-    document.getElementById('filterProduct').value = '';
-    document.getElementById('filterSupplier').value = '';
+    let startDateInput = document.getElementById('filterStartDate');
+    let endDateInput = document.getElementById('filterEndDate');
+    let filterProduct = document.getElementById('filterProduct');
+    let filterSupplier = document.getElementById('filterSupplier');
+    
+    if (startDateInput) startDateInput.value = firstDay.toISOString().split('T')[0];
+    if (endDateInput) endDateInput.value = today.toISOString().split('T')[0];
+    if (filterProduct) filterProduct.value = '';
+    if (filterSupplier) filterSupplier.value = '';
+    
     applyFilters();
 }
 
@@ -1411,11 +1447,18 @@ function updateDisplay(stock) {
         <div class="stat-card"><div class="stat-number">${totalQty}</div><div class="stat-label">Articles</div></div>
         ${isAdmin ? `<div class="stat-card"><div class="stat-number">${totalAmount.toFixed(2)} DNT</div><div class="stat-label">Investissement</div></div>` : ''}
     `;
-    document.getElementById('statsContainer').innerHTML = statsHtml;
+    
+    let statsContainer = document.getElementById('stockStatsContainer');
+    if (statsContainer) statsContainer.innerHTML = statsHtml;
+    
+    let tableContainer = document.getElementById('stockTableContainer');
+    let cardsContainer = document.getElementById('stockCardsContainer');
+    
+    if (!tableContainer || !cardsContainer) return;
     
     if (stock.length === 0) {
-        document.getElementById('tableContainer').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
-        document.getElementById('cardsContainer').innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        tableContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
+        cardsContainer.innerHTML = '<div class="text-center" style="padding:40px;">📭 Aucune entrée stock trouvée</div>';
         return;
     }
     
@@ -1423,7 +1466,7 @@ function updateDisplay(stock) {
     let tableHtml = `<table><thead><tr><th>Date/Heure</th><th>Produit</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th>Fournisseur</th><th>Stock</th><th>Notes</th></tr></thead><tbody>`;
     for (let s of stock) {
         let dateStr = formatDateTime(s.date);
-        let product = window.stockProducts.find(p => p.id == s.product_id);
+        let product = (window.stockProducts || []).find(p => p && p.id == s.product_id);
         tableHtml += `<tr>
             <td><small>${dateStr}</small></td>
             <td><strong>${escapeHtml(s.product_name || '-')}</strong></td>
@@ -1436,13 +1479,13 @@ function updateDisplay(stock) {
         </tr>`;
     }
     tableHtml += `</tbody></table>`;
-    document.getElementById('tableContainer').innerHTML = tableHtml;
+    tableContainer.innerHTML = tableHtml;
     
     // Version cartes (mobile)
     let cardsHtml = '';
     for (let s of stock) {
         let dateStr = formatDateTime(s.date);
-        let product = window.stockProducts.find(p => p.id == s.product_id);
+        let product = (window.stockProducts || []).find(p => p && p.id == s.product_id);
         cardsHtml += `
             <div class="card-item">
                 <div class="card-header">
@@ -1460,7 +1503,7 @@ function updateDisplay(stock) {
             </div>
         `;
     }
-    document.getElementById('cardsContainer').innerHTML = cardsHtml;
+    cardsContainer.innerHTML = cardsHtml;
 }
 
 function formatDateTime(dateStr) {
@@ -1540,7 +1583,6 @@ function showStockInModalForm() {
         </form>
     `);
     
-    // Attacher les événements
     let qty = document.getElementById('qty');
     let buyPrice = document.getElementById('buyPrice');
     let totalSpan = document.getElementById('totalAmount');
@@ -1597,7 +1639,6 @@ function showStockInModalForm() {
     };
 }
 
-// ========== UTILITAIRES ==========
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
