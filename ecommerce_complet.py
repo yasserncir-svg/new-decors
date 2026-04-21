@@ -6559,7 +6559,7 @@ def admin_stock_in_save():
         'success': True, 
         'product': updated_product
     })
-    @app.route('/admin/stock-out')
+@app.route('/admin/stock-out')
 @login_required
 def admin_stock_out():
     conn = get_db()
