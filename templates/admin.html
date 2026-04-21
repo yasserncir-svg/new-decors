@@ -1562,21 +1562,28 @@ async function loadStockIn() {
     }
 }
 
+// ========== POUR ENTRÉES STOCK UNIQUEMENT ==========
+
+async function loadStockIn() {
+    // ... ton code existant (ne change rien)
+}
+
 function applyStockInFilters() {
+    console.log("=== applyStockInFilters exécutée ===");
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
     let productName = document.getElementById('filterProduct')?.value || '';
     let supplierName = document.getElementById('filterSupplier')?.value || '';
     
-    if (!window.allStockData) return;
+    console.log("Produit:", productName, "Fournisseur:", supplierName);
+    
+    if (!window.allStockData) {
+        console.log("Pas de données");
+        return;
+    }
     
     let filtered = [...window.allStockData];
-    
-    // Normaliser une chaîne (enlever accents, minuscules)
-    function normalize(str) {
-        if (!str) return '';
-        return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
+    console.log("Données totales:", filtered.length);
     
     if (startDate && startDate !== '') {
         filtered = filtered.filter(s => {
@@ -1595,22 +1602,31 @@ function applyStockInFilters() {
     }
     
     if (productName && productName !== '') {
-        let normalizedProduct = normalize(productName);
-        filtered = filtered.filter(s => {
-            return normalize(s.product_name) === normalizedProduct;
-        });
+        filtered = filtered.filter(s => s.product_name === productName);
     }
     
     if (supplierName && supplierName !== '') {
-        let normalizedSupplier = normalize(supplierName);
-        filtered = filtered.filter(s => {
-            return normalize(s.supplier_name) === normalizedSupplier;
-        });
+        filtered = filtered.filter(s => s.supplier_name === supplierName);
     }
     
     console.log("Données filtrées:", filtered.length);
-    
     displayFilteredStock(filtered);
+}
+
+function resetStockInFilters() {
+    let startDate = document.getElementById('filterStartDate');
+    let endDate = document.getElementById('filterEndDate');
+    let productSelect = document.getElementById('filterProduct');
+    let supplierSelect = document.getElementById('filterSupplier');
+    
+    if (startDate) startDate.value = '';
+    if (endDate) endDate.value = '';
+    if (productSelect) productSelect.value = '';
+    if (supplierSelect) supplierSelect.value = '';
+    
+    if (window.allStockData) {
+        displayFilteredStock(window.allStockData);
+    }
 }
 function resetStockInFilters() {
     let startDate = document.getElementById('filterStartDate');
