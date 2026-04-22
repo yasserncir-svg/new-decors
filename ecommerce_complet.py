@@ -26,7 +26,7 @@ except ImportError:
     import subprocess
     subprocess.check_call(['pip', 'install', 'Pillow'])
     from PIL import Image
-
+from flask_caching import Cache
 # ==================== AJOUTER LE CODE SUPABASE ICI ====================
 from supabase import create_client
 
@@ -84,7 +84,10 @@ else:
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'new_decors_secret_key_2024')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-
+#  LE CACHE
+app.config['CACHE_TYPE'] = 'SimpleCache'
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300
+cache = Cache(app)
 # Créer les dossiers d'upload (ceux-ci sont déjà des chemins relatifs, donc OK)
 for folder in ['static/uploads', 'static/uploads/medium', 'static/uploads/slider']:
     os.makedirs(folder, exist_ok=True)
@@ -5571,6 +5574,7 @@ HTML_PRINT_STOCK = '''
 # ======= ROUTES FLASK ====================
 
 @app.route('/')
+@cache.cached(timeout=300)
 def index():
     conn = get_db()
     cursor = conn.cursor()
