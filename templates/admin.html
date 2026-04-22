@@ -2874,7 +2874,6 @@ async function loadDashboard() {
     setActiveTab('dashboard', 'Tableau de bord');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
-        // Date par défaut = aujourd'hui
         let today = new Date().toISOString().split('T')[0];
         let currentStartDate = today;
         let currentEndDate = today;
@@ -2882,7 +2881,8 @@ async function loadDashboard() {
         let stats = await fetch('/admin/stats').then(r => r.json());
         let orders = await fetch('/admin/orders?limit=5').then(r => r.json());
         
-        // HTML des filtres de date
+        let isAdmin = stats.is_admin === true;
+        
         let filtersHtml = `
             <div class="card" style="margin-bottom: 20px;">
                 <div class="card-header">
@@ -2910,7 +2910,7 @@ async function loadDashboard() {
             </div>
         `;
         
-        // Construction dynamique des stats selon le rôle
+        // ✅ Construction des stats avec conditions pour cacher CA mois et CA total aux vendeurs
         let statsHtml = `
             ${filtersHtml}
             <div class="stats-grid">
@@ -2919,30 +2919,32 @@ async function loadDashboard() {
                 <div class="stat-card"><div class="stat-number text-danger">${stats.alert_products || 0}</div><div>Alerte stock</div></div>
                 <div class="stat-card"><div class="stat-number">${stats.orders_today || 0}</div><div>Commandes jour</div></div>
                 <div class="stat-card"><div class="stat-number">${(stats.ca_jour || 0).toFixed(2)} DNT</div><div>CA jour</div></div>
-                <div class="stat-card"><div class="stat-number">${(stats.ca_mois || 0).toFixed(2)} DNT</div><div>CA mois</div></div>
-                <div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>
         `;
         
-        // Afficher le bénéfice seulement si l'utilisateur est admin
-        if (stats.is_admin === true) {
+        // ✅ CA MOIS : seulement pour l'admin
+        if (isAdmin) {
+            statsHtml += `<div class="stat-card"><div class="stat-number">${(stats.ca_mois || 0).toFixed(2)} DNT</div><div>CA mois</div></div>`;
+        }
+        
+        // ✅ CA TOTAL : seulement pour l'admin
+        if (isAdmin) {
+            statsHtml += `<div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>`;
+        }
+        
+        // ✅ BÉNÉFICE : seulement pour l'admin
+        if (isAdmin) {
             statsHtml += `<div class="stat-card"><div class="stat-number text-success">${(stats.profit_total || 0).toFixed(2)} DNT</div><div>Bénéfice total</div></div>`;
         }
         
         statsHtml += `</div>`;
         
-        // Générer le tableau des commandes avec formatage des dates
+        // Générer le tableau des commandes
         let ordersHtml = `
             <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>N°</th>
-                            <th>Client</th>
-                            <th>Total</th>
-                            <th>Statut</th>
-                            <th>Date</th>
-                        </tr>
+                        <tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr>
                     </thead>
                     <tbody>
         `;
@@ -2973,7 +2975,6 @@ async function loadDashboard() {
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur</div></div>'; 
     }
 }
-
 // Fonction pour formater les dates (compatible avec tous les formats)
 function formatDate(dateStr) {
     if (!dateStr) return '-';
@@ -3016,7 +3017,6 @@ async function applyDashboardFilters() {
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     
     try {
-        // Appeler l'API avec les filtres de date
         let response = await fetch('/admin/stats/filtered', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3025,6 +3025,8 @@ async function applyDashboardFilters() {
         
         let stats = await response.json();
         let orders = await fetch('/admin/orders?limit=5').then(r => r.json());
+        
+        let isAdmin = stats.is_admin === true;
         
         let filtersHtml = `
             <div class="card" style="margin-bottom: 20px;">
@@ -3053,7 +3055,6 @@ async function applyDashboardFilters() {
             </div>
         `;
         
-        let isAdmin = stats.is_admin === true;
         let statsHtml = `
             ${filtersHtml}
             <div class="stats-grid">
@@ -3062,57 +3063,26 @@ async function applyDashboardFilters() {
                 <div class="stat-card"><div class="stat-number text-danger">${stats.alert_products || 0}</div><div>Alerte stock</div></div>
                 <div class="stat-card"><div class="stat-number">${stats.orders_count || 0}</div><div>Commandes</div></div>
                 <div class="stat-card"><div class="stat-number">${(stats.ca_period || 0).toFixed(2)} DNT</div><div>CA période</div></div>
-                <div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>
         `;
         
+        // ✅ CA TOTAL : seulement pour l'admin
+        if (isAdmin) {
+            statsHtml += `<div class="stat-card"><div class="stat-number">${(stats.ca_total || 0).toFixed(2)} DNT</div><div>CA total</div></div>`;
+        }
+        
+        // ✅ BÉNÉFICE : seulement pour l'admin
         if (isAdmin) {
             statsHtml += `<div class="stat-card"><div class="stat-number text-success">${(stats.profit_period || 0).toFixed(2)} DNT</div><div>Bénéfice période</div></div>`;
         }
         
         statsHtml += `</div>`;
         
-        // Générer le tableau des commandes avec formatage des dates
-        let ordersHtml = `
-            <div class="card"><div class="card-header"><h3>📋 Dernières commandes</h3></div>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>N°</th>
-                            <th>Client</th>
-                            <th>Total</th>
-                            <th>Statut</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        for (let o of orders) {
-            let formattedDate = formatDate(o.date);
-            ordersHtml += `
-                <tr>
-                    <td><strong>${o.order_number}</strong></td>
-                    <td>${o.client_name}</td>
-                    <td class="text-success">${o.total.toFixed(2)} DNT</td>
-                    <td><span class="status-badge status-${o.status}">${o.status}</span></td>
-                    <td>${formattedDate}</td>
-                </tr>
-            `;
-        }
-        
-        ordersHtml += `
-                    </tbody>
-                </table>
-            </div>
-        </div>`;
-        
-        document.getElementById('dynamicContent').innerHTML = statsHtml + ordersHtml;
+        // ... le reste du code pour les commandes ...
         
     } catch(e) {
         console.error('Erreur:', e);
         showToast('Erreur lors du filtrage', 'error');
-        loadDashboard(); // Recharger le dashboard par défaut
+        loadDashboard();
     }
 }
 
