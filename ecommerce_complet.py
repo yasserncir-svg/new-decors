@@ -7548,7 +7548,7 @@ def products_page():
         cat['subcategories'] = cursor.fetchall()
     
     conn.close()
-    return render_template_string('index.html', 
+    return render_template('index.html', 
                                   products=products, 
                                   categories=categories,
                                   settings=settings, 
