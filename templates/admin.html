@@ -1547,9 +1547,12 @@ function formatDateTime(dateStr) {
 }
 // ========== ENTRÉE STOCK COMPLÈTE ==========
 function showStockInModal() {
+    // Ajoute un indicateur de chargement
+    openModal('📥 Nouvelle entrée stock', '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>');
+    
     Promise.all([
-        fetch('/admin/products').then(r => r.json()),
-        fetch('/admin/suppliers').then(r => r.json())
+        fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
+        fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
     ]).then(([productsData, suppliers]) => {
         
         let products = productsData.products || [];
@@ -1570,7 +1573,8 @@ function showStockInModal() {
             supplierOptions += `<option value="${s.id}">${s.name}${s.company ? ' - ' + s.company : ''}</option>`;
         }
         
-        openModal('📥 Nouvelle entrée stock (Achat)', `
+        // Mettre à jour le modal avec le vrai contenu
+        document.getElementById('modalBody').innerHTML = `
             <style>
                 .info-stock { background: #e3f2fd; padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; }
                 .total-stock { background: #e8f5e9; padding: 12px; border-radius: 10px; margin: 15px 0; text-align: center; }
@@ -1633,53 +1637,50 @@ function showStockInModal() {
                     <button type="button" class="btn" onclick="closeModal()">Annuler</button>
                 </div>
             </form>
-        `);
+        `;
         
-        // Attacher les événements après l'ouverture du modal
-        setTimeout(() => {
-            const productSelect = document.getElementById('stockProductSelect');
-            const qtyInput = document.getElementById('stockQty');
-            const purchasePrice = document.getElementById('purchasePrice');
-            const salePrice = document.getElementById('salePrice');
-            const totalSpan = document.getElementById('totalAmount');
-            const productRefSpan = document.getElementById('productRef');
-            const currentStockSpan = document.getElementById('currentStock');
-            const currentPriceSpan = document.getElementById('currentPrice');
-            
-            function updateTotal() {
-                let qty = parseInt(qtyInput.value) || 0;
-                let price = parseFloat(purchasePrice.value) || 0;
-                totalSpan.innerHTML = (qty * price).toFixed(2) + ' DNT';
-            }
-            
-            function updateProductInfo() {
-                let select = productSelect;
-                let opt = select.options[select.selectedIndex];
-                if (select.value && opt) {
-                    let ref = opt.getAttribute('data-ref') || '-';
-                    let currentStock = opt.getAttribute('data-current-stock') || 0;
-                    let currentPrice = opt.getAttribute('data-current-price') || 0;
-                    productRefSpan.innerHTML = ref;
-                    currentStockSpan.innerHTML = currentStock;
-                    currentPriceSpan.innerHTML = currentPrice;
-                    
-                    // Pré-remplir le prix de vente avec le prix actuel
-                    if (currentPrice > 0 && !salePrice.value) {
-                        salePrice.value = parseFloat(currentPrice).toFixed(2);
-                    }
+        // Attacher les événements
+        const productSelect = document.getElementById('stockProductSelect');
+        const qtyInput = document.getElementById('stockQty');
+        const purchasePrice = document.getElementById('purchasePrice');
+        const salePrice = document.getElementById('salePrice');
+        const totalSpan = document.getElementById('totalAmount');
+        const productRefSpan = document.getElementById('productRef');
+        const currentStockSpan = document.getElementById('currentStock');
+        const currentPriceSpan = document.getElementById('currentPrice');
+        
+        function updateTotal() {
+            let qty = parseInt(qtyInput?.value) || 0;
+            let price = parseFloat(purchasePrice?.value) || 0;
+            if (totalSpan) totalSpan.innerHTML = (qty * price).toFixed(2) + ' DNT';
+        }
+        
+        function updateProductInfo() {
+            let select = productSelect;
+            let opt = select.options[select.selectedIndex];
+            if (select.value && opt) {
+                let ref = opt.getAttribute('data-ref') || '-';
+                let currentStock = opt.getAttribute('data-current-stock') || 0;
+                let currentPrice = opt.getAttribute('data-current-price') || 0;
+                if (productRefSpan) productRefSpan.innerHTML = ref;
+                if (currentStockSpan) currentStockSpan.innerHTML = currentStock;
+                if (currentPriceSpan) currentPriceSpan.innerHTML = currentPrice;
+                
+                if (currentPrice > 0 && salePrice && !salePrice.value) {
+                    salePrice.value = parseFloat(currentPrice).toFixed(2);
                 }
             }
-            
-            productSelect.addEventListener('change', updateProductInfo);
-            qtyInput.addEventListener('input', updateTotal);
-            purchasePrice.addEventListener('input', updateTotal);
-            salePrice.addEventListener('input', updateTotal);
-            
-            // Initialiser
-            updateProductInfo();
-            updateTotal();
-        }, 100);
+        }
         
+        if (productSelect) productSelect.addEventListener('change', updateProductInfo);
+        if (qtyInput) qtyInput.addEventListener('input', updateTotal);
+        if (purchasePrice) purchasePrice.addEventListener('input', updateTotal);
+        if (salePrice) salePrice.addEventListener('input', updateTotal);
+        
+        updateProductInfo();
+        updateTotal();
+        
+        // Soumission du formulaire
         document.getElementById('stockInForm').onsubmit = async (e) => {
             e.preventDefault();
             let submitBtn = e.target.querySelector('button[type="submit"]');
@@ -1696,18 +1697,7 @@ function showStockInModal() {
                 if (result.success) {
                     showToast('✅ Entrée stock enregistrée', 'success');
                     closeModal();
-                    
-                    // Recharger toutes les données
                     await loadStockIn();
-                    await loadProducts();
-                    
-                    // Mettre à jour les variables globales
-                    if (result.product) {
-                        let productIndex = window.stockProducts.findIndex(p => p.id == result.product.id);
-                        if (productIndex !== -1) {
-                            window.stockProducts[productIndex] = result.product;
-                        }
-                    }
                 } else {
                     showToast('❌ Erreur: ' + (result.error || 'Inconnue'), 'error');
                     submitBtn.disabled = false;
@@ -1722,6 +1712,7 @@ function showStockInModal() {
         
     }).catch(e => {
         showToast('Erreur de chargement des données', 'error');
+        closeModal();
     });
 }
 // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
