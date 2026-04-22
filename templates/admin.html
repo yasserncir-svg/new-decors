@@ -1242,9 +1242,36 @@ async function loadStockIn() {
         window.allStockData = stock;
         window.suppliersList = suppliers;
         
+        // 🔐 Récupérer le rôle de l'utilisateur
+        let userRole = '{{ session.role }}';
+        let isAdmin = (userRole === 'admin');
+        
         // Générer les options uniques pour les filtres
         let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
         let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
+        
+        let productOptions = '<option value="">📦 Tous les produits</option>';
+        for (let p of uniqueProducts) productOptions += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
+        
+        let supplierOptions = '<option value="">🏭 Tous les fournisseurs</option>';
+        for (let s of uniqueSuppliers) supplierOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+        
+        // 📅 Définir les dates par défaut selon le rôle
+        let today = new Date();
+        let startDateStr, endDateStr;
+        
+        if (isAdmin) {
+            // Admin : voit le mois en cours
+            let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            startDateStr = firstDay.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        } else {
+            // Vendeur : voit seulement les 2 derniers jours
+            let twoDaysAgo = new Date(today);
+            twoDaysAgo.setDate(today.getDate() - 2);
+            startDateStr = twoDaysAgo.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        }
         
         let html = `
             <style>
@@ -1298,6 +1325,7 @@ async function loadStockIn() {
                     border: 1px solid #ddd;
                     border-radius: 10px;
                 }
+                ${!isAdmin ? `.filter-group input[type="date"] { background-color: #f5f5f5; cursor: not-allowed; }` : ''}
                 .btn-reset {
                     padding: 10px 20px;
                     background: #f0f0f0;
@@ -1373,11 +1401,11 @@ async function loadStockIn() {
                 <div class="filters-bar">
                     <div class="filter-group">
                         <label>📅 Date début</label>
-                        <input type="date" id="filterStartDate">
+                        <input type="date" id="filterStartDate" ${!isAdmin ? 'readonly' : ''}>
                     </div>
                     <div class="filter-group">
                         <label>📅 Date fin</label>
-                        <input type="date" id="filterEndDate">
+                        <input type="date" id="filterEndDate" ${!isAdmin ? 'readonly' : ''}>
                     </div>
                     <div class="filter-group">
                         <label>📦 Produit</label>
@@ -1404,14 +1432,18 @@ async function loadStockIn() {
         
         document.getElementById('dynamicContent').innerHTML = html;
         
-        // Définir les dates par défaut (mois en cours)
-        let today = new Date();
-        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        let firstDayStr = firstDay.toISOString().split('T')[0];
-        let todayStr = today.toISOString().split('T')[0];
+        // Appliquer les dates par défaut
+        let startDateInput = document.getElementById('filterStartDate');
+        let endDateInput = document.getElementById('filterEndDate');
         
-        document.getElementById('filterStartDate').value = firstDayStr;
-        document.getElementById('filterEndDate').value = todayStr;
+        if (startDateInput) startDateInput.value = startDateStr;
+        if (endDateInput) endDateInput.value = endDateStr;
+        
+        // Pour les vendeurs, désactiver la modification des dates
+        if (!isAdmin) {
+            if (startDateInput) startDateInput.disabled = true;
+            if (endDateInput) endDateInput.disabled = true;
+        }
         
         // Attacher les événements
         document.getElementById('filterStartDate').onchange = () => applyFilters();
@@ -1429,12 +1461,34 @@ async function loadStockIn() {
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-danger">❌ Erreur de chargement</div></div>';
     }
 }
-
 function applyFilters() {
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
     let productName = document.getElementById('filterProduct')?.value || '';
     let supplierName = document.getElementById('filterSupplier')?.value || '';
+    
+    // 🔐 Vérifier le rôle
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
+    
+    // Si vendeur, forcer les dates à 2 jours max
+    if (!isAdmin) {
+        let today = new Date();
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        
+        let maxStartDate = twoDaysAgo.toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+        
+        if (startDate && startDate < maxStartDate) {
+            startDate = maxStartDate;
+            document.getElementById('filterStartDate').value = maxStartDate;
+        }
+        if (endDate && endDate > todayStr) {
+            endDate = todayStr;
+            document.getElementById('filterEndDate').value = todayStr;
+        }
+    }
     
     if (!window.allStockData) return;
     
@@ -1461,7 +1515,6 @@ function applyFilters() {
     
     updateDisplay(filtered);
 }
-
 function resetFilters() {
     let today = new Date();
     let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
