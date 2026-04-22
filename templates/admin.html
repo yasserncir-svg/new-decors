@@ -1774,14 +1774,28 @@ async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
+        let userRole = '{{ session.role }}';
+        let isAdmin = (userRole === 'admin');
+        
         let response = await fetch('/admin/stock-out');
         let stock = await response.json();
-        allStockData = stock;
+        window.allStockOutData = stock;
         
         console.log("Ventes chargées:", stock.length);
         
-        // Date par défaut = aujourd'hui
-        let today = new Date().toISOString().split('T')[0];
+        let today = new Date();
+        let startDateStr, endDateStr;
+        
+        if (isAdmin) {
+            let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            startDateStr = firstDay.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        } else {
+            let twoDaysAgo = new Date(today);
+            twoDaysAgo.setDate(today.getDate() - 2);
+            startDateStr = twoDaysAgo.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        }
         
         let html = `
             <style>
@@ -1813,15 +1827,15 @@ async function loadStockOut() {
                         <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 130px;">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date début</label>
-                                <input type="date" id="filterStartDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                                <input type="date" id="stockOutStartDate" value="${startDateStr}">
                             </div>
                             <div style="flex: 1; min-width: 130px;">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date fin</label>
-                                <input type="date" id="filterEndDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                                <input type="date" id="stockOutEndDate" value="${endDateStr}">
                             </div>
                             <div style="flex: 1; min-width: 130px;">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">🔄 Type</label>
-                                <select id="filterType" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
+                                <select id="stockOutType">
                                     <option value="all">📊 Tous</option>
                                     <option value="direct">🛒 Vente directe</option>
                                     <option value="order">📦 Commande en ligne</option>
@@ -1830,25 +1844,14 @@ async function loadStockOut() {
                         </div>
                         <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                             <div style="flex: 1; min-width: 130px;">
-                                <label style="font-size: 12px; display: block; margin-bottom: 5px;">📆 Période rapide</label>
-                                <select id="filterPeriod" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
-                                    <option value="">🔽 Choisir...</option>
-                                    <option value="today">📅 Aujourd'hui</option>
-                                    <option value="yesterday">📅 Hier</option>
-                                    <option value="week">📅 Cette semaine</option>
-                                    <option value="month">📅 Ce mois</option>
-                                    <option value="lastmonth">📅 Mois dernier</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1; min-width: 100px;">
                                 <label style="font-size: 12px;">&nbsp;</label>
-                                <button class="btn btn-primary" onclick="applyStockFilters()" style="width: 100%; padding: 8px;">
+                                <button class="btn btn-primary" onclick="applyStockOutFilters()" style="width: 100%; padding: 8px;">
                                     <i class="fas fa-search"></i> Appliquer
                                 </button>
                             </div>
                             <div style="flex: 1; min-width: 100px;">
                                 <label style="font-size: 12px;">&nbsp;</label>
-                                <button class="btn btn-outline" onclick="resetStockFilters()" style="width: 100%; padding: 8px;">
+                                <button class="btn btn-outline" onclick="resetStockOutFilters()" style="width: 100%; padding: 8px;">
                                     <i class="fas fa-undo"></i> Reset
                                 </button>
                             </div>
@@ -1856,32 +1859,125 @@ async function loadStockOut() {
                     </div>
                 </div>
                 
-                <div id="statsContainer"></div>
-                <div id="stockTableContainer" style="overflow-x: auto;"></div>
+                <div id="stockOutStats"></div>
+                <div id="stockOutTableContainer" style="overflow-x: auto;"></div>
             </div>
         `;
         document.getElementById('dynamicContent').innerHTML = html;
         
-        // Attacher l'événement pour le filtre période
-        const periodSelect = document.getElementById('filterPeriod');
-        if (periodSelect) {
-            periodSelect.addEventListener('change', function() {
-                applyQuickPeriod();
-            });
+        // Désactiver les dates pour les vendeurs
+        if (!isAdmin) {
+            let startInput = document.getElementById('stockOutStartDate');
+            let endInput = document.getElementById('stockOutEndDate');
+            if (startInput) startInput.disabled = true;
+            if (endInput) endInput.disabled = true;
         }
         
-        // Afficher toutes les ventes au chargement
-        updateStockDisplay(allStockData);
+        updateStockOutDisplay(window.allStockOutData);
         
     } catch(e) {
         console.error('Erreur:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur: ' + e.message + '</div></div>';
     }
 }
-function updateStockDisplay(data) {
-    console.log("updateStockDisplay appelé avec", data.length, "éléments");
+
+function applyStockOutFilters() {
+    let startDate = document.getElementById('stockOutStartDate')?.value || '';
+    let endDate = document.getElementById('stockOutEndDate')?.value || '';
+    let filterType = document.getElementById('stockOutType')?.value || 'all';
     
-    let isAdmin = window.isAdmin || false;
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
+    
+    // Si vendeur, forcer les dates à 2 jours max
+    if (!isAdmin) {
+        let today = new Date();
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        
+        let maxStartDate = twoDaysAgo.toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+        
+        if (startDate && startDate < maxStartDate) {
+            startDate = maxStartDate;
+            let startInput = document.getElementById('stockOutStartDate');
+            if (startInput) startInput.value = maxStartDate;
+        }
+        if (endDate && endDate > todayStr) {
+            endDate = todayStr;
+            let endInput = document.getElementById('stockOutEndDate');
+            if (endInput) endInput.value = todayStr;
+        }
+    }
+    
+    if (!window.allStockOutData) return;
+    
+    let filtered = [...window.allStockOutData];
+    
+    function extractDate(dateStr) {
+        if (!dateStr) return '';
+        let d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+        }
+        return dateStr.split(' ')[0];
+    }
+    
+    if (startDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            return extractDate(s.date) >= startDate;
+        });
+    }
+    
+    if (endDate) {
+        filtered = filtered.filter(s => {
+            if (!s.date) return false;
+            return extractDate(s.date) <= endDate;
+        });
+    }
+    
+    if (filterType !== 'all') {
+        filtered = filtered.filter(s => s.sale_type === filterType);
+    }
+    
+    updateStockOutDisplay(filtered);
+}
+
+function resetStockOutFilters() {
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
+    
+    let today = new Date();
+    let startDateStr, endDateStr;
+    
+    if (isAdmin) {
+        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        startDateStr = firstDay.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    } else {
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        startDateStr = twoDaysAgo.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    }
+    
+    let startInput = document.getElementById('stockOutStartDate');
+    let endInput = document.getElementById('stockOutEndDate');
+    let filterType = document.getElementById('stockOutType');
+    
+    if (startInput) startInput.value = startDateStr;
+    if (endInput) endInput.value = endDateStr;
+    if (filterType) filterType.value = 'all';
+    
+    applyStockOutFilters();
+}
+
+function updateStockOutDisplay(data) {
+    console.log("updateStockOutDisplay appelé avec", data.length, "éléments");
+    
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
     
     let totalQuantity = 0, totalRevenue = 0, totalProfit = 0, onlineCount = 0, directCount = 0;
     for (let i = 0; i < data.length; i++) {
@@ -1891,28 +1987,27 @@ function updateStockDisplay(data) {
         totalProfit += s.profit || 0;
         if (s.sale_type === 'order') onlineCount++; else directCount++;
     }
-    let avgMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0;
     
     let statsHtml = `
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
-            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
-                <div style="font-size: 20px; font-weight: 800; color: var(--primary-dark);">${data.length}</div>
+            <div style="background: white; padding: 10px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 20px; font-weight: 800; color: #DB2777;">${data.length}</div>
                 <div style="font-size: 11px;">Total ventes</div>
-                <small style="font-size: 9px;">📦 ${onlineCount} | 🛒 ${directCount}</small>
+                <small>📦 ${onlineCount} | 🛒 ${directCount}</small>
             </div>
-            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
-                <div style="font-size: 20px; font-weight: 800; color: var(--primary-dark);">${totalQuantity}</div>
+            <div style="background: white; padding: 10px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 20px; font-weight: 800; color: #DB2777;">${totalQuantity}</div>
                 <div style="font-size: 11px;">Articles vendus</div>
             </div>
-            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
-                <div style="font-size: 18px; font-weight: 800; color: var(--primary-dark);">${totalRevenue.toFixed(2)} DNT</div>
+            <div style="background: white; padding: 10px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 800; color: #DB2777;">${totalRevenue.toFixed(2)} DNT</div>
                 <div style="font-size: 11px;">CA total</div>
             </div>
     `;
     
     if (isAdmin) {
         statsHtml += `
-            <div class="stat-card" style="padding: 10px; text-align: center; background: #f8f9fa; border-radius: 10px;">
+            <div style="background: white; padding: 10px; border-radius: 10px; text-align: center;">
                 <div style="font-size: 18px; font-weight: 800; color: #27ae60;">${totalProfit.toFixed(2)} DNT</div>
                 <div style="font-size: 11px;">Bénéfice</div>
             </div>
@@ -1920,226 +2015,45 @@ function updateStockDisplay(data) {
     }
     
     statsHtml += `</div>`;
-    document.getElementById('statsContainer').innerHTML = statsHtml;
+    document.getElementById('stockOutStats').innerHTML = statsHtml;
     
     if (data.length === 0) {
-        document.getElementById('stockTableContainer').innerHTML = '<div class="text-center" style="padding: 40px; color: #999;">📭 Aucune vente trouvée</div>';
+        document.getElementById('stockOutTableContainer').innerHTML = '<div class="text-center" style="padding: 40px;">📭 Aucune vente trouvée</div>';
         return;
     }
     
-    // Version mobile : cartes au lieu de tableau
     let isMobile = window.innerWidth <= 768;
     
     if (isMobile) {
-        // Affichage en cartes pour mobile
         let cardsHtml = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
-        
-        for (let i = 0; i < data.length; i++) {
-            let s = data[i];
-            let dateStr = s.date ? s.date.split(' ')[0] : '-';
-            let isOnline = (s.sale_type === 'order');
-            let typeLabel = isOnline ? '📦 En ligne' : '🛒 Caisse';
-            let typeColor = isOnline ? '#1565c0' : '#2e7d32';
-            
+        for (let s of data) {
+            let dateStr = s.date ? new Date(s.date).toLocaleDateString('fr') : '-';
             cardsHtml += `
-                <div style="background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; font-size: 14px;">${escapeHtml(s.product_name || '-')}</div>
-                        <div style="background: ${typeColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px;">${typeLabel}</div>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
-                            <i class="fas fa-calendar"></i> ${dateStr}
-                        </div>
-                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
-                            <i class="fas fa-user"></i> ${escapeHtml(s.client_name || '-')}
-                        </div>
-                        <div style="background: #f5f5f5; padding: 4px 8px; border-radius: 8px; font-size: 11px;">
-                            <i class="fas fa-phone"></i> ${s.client_phone || '-'}
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 8px;">
-                        <div>
-                            <div style="font-size: 12px; color: #666;">Quantité: ${s.quantity}</div>
-                            <div style="font-size: 12px; color: #666;">Vendeur: ${s.seller_name || '-'}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 16px; font-weight: 700; color: #27ae60;">${(s.total || 0).toFixed(2)} DNT</div>
-                            ${isAdmin ? `<div style="font-size: 11px; ${(s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;'}">Bénéfice: ${(s.profit || 0).toFixed(2)} DNT</div>` : ''}
-                        </div>
-                    </div>
+                <div style="background: white; border-radius: 12px; padding: 12px;">
+                    <div style="font-weight: 700;">${escapeHtml(s.product_name || '-')}</div>
+                    <div style="font-size: 11px; color: #666;">📅 ${dateStr} | 👤 ${escapeHtml(s.client_name || '-')}</div>
+                    <div style="font-size: 13px; margin-top: 8px;">💰 ${(s.total || 0).toFixed(2)} DNT | 📦 ${s.quantity} unités</div>
                 </div>
             `;
         }
-        
         cardsHtml += `</div>`;
-        document.getElementById('stockTableContainer').innerHTML = cardsHtml;
-        
+        document.getElementById('stockOutTableContainer').innerHTML = cardsHtml;
     } else {
-        // Affichage en tableau pour desktop
-        let tableHtml = `
-            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px;">
-                    <thead>
-                        <tr style="background: #f5f5f5;">
-                            <th style="padding: 10px 8px; text-align: left;">Date</th>
-                            <th style="padding: 10px 8px; text-align: left;">Type</th>
-                            <th style="padding: 10px 8px; text-align: left;">Produit</th>
-                            <th style="padding: 10px 8px; text-align: left;">Client</th>
-                            <th style="padding: 10px 8px; text-align: center;">Qté</th>
-                            <th style="padding: 10px 8px; text-align: right;">Total</th>
-        `;
-        
-        if (isAdmin) {
-            tableHtml += `<th style="padding: 10px 8px; text-align: right;">Bénéfice</th>`;
+        let tableHtml = `<table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#f5f5f5;"><th style="padding:10px;">Date</th><th style="padding:10px;">Produit</th><th style="padding:10px;">Client</th><th style="padding:10px;">Qté</th><th style="padding:10px;">Total</th></tr></thead><tbody>`;
+        for (let s of data) {
+            let dateStr = s.date ? new Date(s.date).toLocaleDateString('fr') : '-';
+            tableHtml += `<tr><td style="padding:8px;">${dateStr}</td><td style="padding:8px;">${escapeHtml(s.product_name || '-')}</td><td style="padding:8px;">${escapeHtml(s.client_name || '-')}</td><td style="padding:8px; text-align:center;">${s.quantity}</td><td style="padding:8px;">${(s.total || 0).toFixed(2)} DNT</td></tr>`;
         }
-        
-        tableHtml += `<th style="padding: 10px 8px; text-align: left;">Vendeur</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        for (let i = 0; i < data.length; i++) {
-            let s = data[i];
-            let dateStr = s.date ? s.date.split(' ')[0] : '-';
-            let isOnline = (s.sale_type === 'order');
-            let typeLabel = isOnline ? '📦 En ligne' : '🛒 Caisse';
-            let typeColor = isOnline ? 'background:#e3f2fd;color:#1565c0;' : 'background:#e8f5e9;color:#2e7d32;';
-            
-            tableHtml += `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px 8px;">${dateStr}</td>
-                    <td style="padding: 10px 8px;"><span style="${typeColor} padding: 4px 10px; border-radius: 20px; font-size: 11px; display: inline-block;">${typeLabel}</span></td>
-                    <td style="padding: 10px 8px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
-                    <td style="padding: 10px 8px;">${escapeHtml(s.client_name || '-')}<br><small style="color:#999;">${s.client_phone || ''}</small></td>
-                    <td style="padding: 10px 8px; text-align: center;">${s.quantity}</td>
-                    <td style="padding: 10px 8px; text-align: right; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
-            `;
-            
-            if (isAdmin) {
-                let profitClass = (s.profit || 0) >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;';
-                tableHtml += `<td style="padding: 10px 8px; text-align: right; ${profitClass}">${(s.profit || 0).toFixed(2)} DNT</td>`;
-            }
-            
-            tableHtml += `<td style="padding: 10px 8px;">${s.seller_name || '-'}</td>
-                </tr>
-            `;
-        }
-        
-        tableHtml += `
-                </tbody>
-            </table>
-            </div>
-        `;
-        document.getElementById('stockTableContainer').innerHTML = tableHtml;
+        tableHtml += `</tbody></table>`;
+        document.getElementById('stockOutTableContainer').innerHTML = tableHtml;
     }
-}
-
-function applyStockFilters() {
-    let startDate = document.getElementById('filterStartDate').value;
-    let endDate = document.getElementById('filterEndDate').value;
-    let filterType = document.getElementById('filterType').value;
-    
-    let filtered = [...allStockData];
-    
-    // Fonction pour extraire la date au format YYYY-MM-DD
-    function extractDate(dateStr) {
-        if (!dateStr) return '';
-        // Essaie de parser différents formats
-        let d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-            return d.toISOString().split('T')[0];
-        }
-        return '';
-    }
-    
-    if (startDate) {
-        filtered = filtered.filter(s => {
-            if (!s.date) return false;
-            let itemDate = extractDate(s.date);
-            return itemDate >= startDate;
-        });
-    }
-    
-    if (endDate) {
-        filtered = filtered.filter(s => {
-            if (!s.date) return false;
-            let itemDate = extractDate(s.date);
-            return itemDate <= endDate;
-        });
-    }
-    
-    if (filterType !== 'all') {
-        filtered = filtered.filter(s => s.sale_type === filterType);
-    }
-    
-    console.log("Données filtrées:", filtered.length);
-    
-    updateStockDisplay(filtered);
-}
-function resetStockFilters() {
-    let today = new Date().toISOString().split('T')[0];
-    document.getElementById('filterStartDate').value = today;
-    document.getElementById('filterEndDate').value = today;
-    document.getElementById('filterType').value = 'all';
-    document.getElementById('filterPeriod').value = '';
-    applyStockFilters();
-}
-
-function applyQuickPeriod() {
-    let period = document.getElementById('filterPeriod').value;
-    let today = new Date();
-    let startDate = '';
-    let endDate = today.toISOString().split('T')[0];
-    
-    if (!period) return;
-    
-    switch(period) {
-        case 'today':
-            startDate = endDate;
-            break;
-        case 'yesterday':
-            let yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            startDate = yesterday.toISOString().split('T')[0];
-            endDate = startDate;
-            break;
-        case 'week':
-            let day = today.getDay();
-            let weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-            startDate = weekStart.toISOString().split('T')[0];
-            break;
-        case 'month':
-            startDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
-            break;
-        case 'lastmonth':
-            let lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            let lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-            startDate = lastMonth.toISOString().split('T')[0];
-            endDate = lastMonthEnd.toISOString().split('T')[0];
-            break;
-        default:
-            return;
-    }
-    
-    if (startDate) document.getElementById('filterStartDate').value = startDate;
-    if (endDate) document.getElementById('filterEndDate').value = endDate;
-    
-    applyStockFilters();
 }
 
 function printStockOut() {
-    // Récupérer les valeurs des filtres
-    let startDate = document.getElementById('filterStartDate').value;
-    let endDate = document.getElementById('filterEndDate').value;
-    let filterType = document.getElementById('filterType').value;
-    
-    // Construire l'URL avec les paramètres
+    let startDate = document.getElementById('stockOutStartDate')?.value || '';
+    let endDate = document.getElementById('stockOutEndDate')?.value || '';
+    let filterType = document.getElementById('stockOutType')?.value || 'all';
     let url = `/admin/stock-out/print?start_date=${startDate}&end_date=${endDate}&sale_type=${filterType}`;
-    
-    // Ouvrir dans une nouvelle fenêtre
     window.open(url, '_blank', 'width=1000,height=800');
 }
 // ========== CAISSE ==========
