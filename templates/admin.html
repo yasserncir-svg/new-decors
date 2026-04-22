@@ -1972,7 +1972,6 @@ function resetStockOutFilters() {
     
     applyStockOutFilters();
 }
-
 function updateStockOutDisplay(data) {
     console.log("updateStockOutDisplay appelé avec", data.length, "éléments");
     
@@ -2024,31 +2023,100 @@ function updateStockOutDisplay(data) {
     
     let isMobile = window.innerWidth <= 768;
     
+    // Fonction pour formater date + heure
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '-';
+        let d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('fr') + ' ' + d.toLocaleTimeString('fr', {hour:'2-digit', minute:'2-digit'});
+    }
+    
     if (isMobile) {
+        // 📱 Version mobile : cartes avec vendeur et heure
         let cardsHtml = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
         for (let s of data) {
-            let dateStr = s.date ? new Date(s.date).toLocaleDateString('fr') : '-';
+            let dateTimeStr = formatDateTime(s.date);
+            let typeLabel = s.sale_type === 'order' ? '📦 En ligne' : '🛒 Caisse';
+            let typeColor = s.sale_type === 'order' ? '#1565c0' : '#2e7d32';
+            
             cardsHtml += `
-                <div style="background: white; border-radius: 12px; padding: 12px;">
-                    <div style="font-weight: 700;">${escapeHtml(s.product_name || '-')}</div>
-                    <div style="font-size: 11px; color: #666;">📅 ${dateStr} | 👤 ${escapeHtml(s.client_name || '-')}</div>
-                    <div style="font-size: 13px; margin-top: 8px;">💰 ${(s.total || 0).toFixed(2)} DNT | 📦 ${s.quantity} unités</div>
+                <div style="background: white; border-radius: 12px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; font-size: 14px;">${escapeHtml(s.product_name || '-')}</div>
+                        <div style="background: ${typeColor}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 10px;">${typeLabel}</div>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 12px; color: #666;"><i class="fas fa-calendar"></i> ${dateTimeStr}</div>
+                        <div style="font-size: 12px; color: #666;"><i class="fas fa-user"></i> ${escapeHtml(s.client_name || '-')}</div>
+                        <div style="font-size: 12px; color: #666;"><i class="fas fa-phone"></i> ${s.client_phone || '-'}</div>
+                        <div style="font-size: 12px; color: #666;"><i class="fas fa-user-tie"></i> Vendeur: ${s.seller_name || 'Système'}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 8px;">
+                        <div><strong>Qté: ${s.quantity}</strong></div>
+                        <div><strong style="color: #27ae60;">${(s.total || 0).toFixed(2)} DNT</strong></div>
+                    </div>
+                    ${isAdmin ? `<div style="font-size: 11px; margin-top: 5px;">💰 Bénéfice: ${(s.profit || 0).toFixed(2)} DNT</div>` : ''}
                 </div>
             `;
         }
         cardsHtml += `</div>`;
         document.getElementById('stockOutTableContainer').innerHTML = cardsHtml;
+        
     } else {
-        let tableHtml = `<table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#f5f5f5;"><th style="padding:10px;">Date</th><th style="padding:10px;">Produit</th><th style="padding:10px;">Client</th><th style="padding:10px;">Qté</th><th style="padding:10px;">Total</th></tr></thead><tbody>`;
+        // 💻 Version desktop : tableau avec vendeur et heure
+        let tableHtml = `
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px;">Date/Heure</th>
+                            <th style="padding: 10px;">Type</th>
+                            <th style="padding: 10px;">Produit</th>
+                            <th style="padding: 10px;">Client</th>
+                            <th style="padding: 10px;">Tél</th>
+                            <th style="padding: 10px;">Qté</th>
+                            <th style="padding: 10px;">Total</th>
+                            <th style="padding: 10px;">Vendeur</th>
+                            ${isAdmin ? '<th style="padding: 10px;">Bénéfice</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
         for (let s of data) {
-            let dateStr = s.date ? new Date(s.date).toLocaleDateString('fr') : '-';
-            tableHtml += `<tr><td style="padding:8px;">${dateStr}</td><td style="padding:8px;">${escapeHtml(s.product_name || '-')}</td><td style="padding:8px;">${escapeHtml(s.client_name || '-')}</td><td style="padding:8px; text-align:center;">${s.quantity}</td><td style="padding:8px;">${(s.total || 0).toFixed(2)} DNT</td></tr>`;
+            let dateTimeStr = formatDateTime(s.date);
+            let typeLabel = s.sale_type === 'order' ? '📦 En ligne' : '🛒 Caisse';
+            let typeColor = s.sale_type === 'order' ? '#e3f2fd' : '#e8f5e9';
+            let typeTextColor = s.sale_type === 'order' ? '#1565c0' : '#2e7d32';
+            
+            tableHtml += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px; white-space: nowrap;">${dateTimeStr}</td>
+                    <td style="padding: 10px;"><span style="background: ${typeColor}; color: ${typeTextColor}; padding: 4px 10px; border-radius: 20px; font-size: 11px;">${typeLabel}</span></td>
+                    <td style="padding: 10px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
+                    <td style="padding: 10px;">${escapeHtml(s.client_name || '-')}</td>
+                    <td style="padding: 10px;">${s.client_phone || '-'}</td>
+                    <td style="padding: 10px; text-align: center;">${s.quantity}</td>
+                    <td style="padding: 10px; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
+                    <td style="padding: 10px;">${s.seller_name || 'Système'}</td>
+            `;
+            
+            if (isAdmin) {
+                let profitColor = (s.profit || 0) >= 0 ? '#27ae60' : '#e74c3c';
+                tableHtml += `<td style="padding: 10px; color: ${profitColor};">${(s.profit || 0).toFixed(2)} DNT</td>`;
+            }
+            
+            tableHtml += `</tr>`;
         }
-        tableHtml += `</tbody></table>`;
+        
+        tableHtml += `
+                    </tbody>
+                </table>
+            </div>
+        `;
         document.getElementById('stockOutTableContainer').innerHTML = tableHtml;
     }
 }
-
 function printStockOut() {
     let startDate = document.getElementById('stockOutStartDate')?.value || '';
     let endDate = document.getElementById('stockOutEndDate')?.value || '';
