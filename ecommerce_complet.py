@@ -6756,118 +6756,88 @@ def admin_stats():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Récupérer le rôle de l'utilisateur
     user_role = session.get('role')
     is_admin = (user_role == 'admin')
     
-    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE active=1")
-    products = cursor.fetchone()['count']
-    
-    execute_query(cursor,"SELECT SUM(stock) as total FROM products WHERE active=1")
-    row = cursor.fetchone()
-    stock_total = row['total'] or 0 if row else 0
-    
-    execute_query(cursor,"SELECT COUNT(*) as count FROM products WHERE stock <= stock_min AND active=1")
-    alert_products = cursor.fetchone()['count']
-    
     today = datetime.now().strftime('%Y-%m-%d')
-    
-    # Commandes en ligne du jour (PostgreSQL compatible)
-    if DATABASE_URL:
-        execute_query(cursor,"""
-            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-            FROM orders 
-            WHERE DATE(date) = %s AND status NOT IN ('cancelled', 'pending')
-        """, (today,))
-    else:
-        execute_query(cursor,"""
-            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-            FROM orders 
-            WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')
-        """, (today + '%',))
-    orders_today_data = cursor.fetchone()
-    orders_today_count = orders_today_data['count'] or 0
-    orders_today_ca = orders_today_data['total'] or 0
-    
-    # Ventes directes (caisse) du jour
-    if DATABASE_URL:
-        execute_query(cursor,"""
-            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-            FROM stock_out 
-            WHERE sale_type = 'direct' AND DATE(date) = %s
-        """, (today,))
-    else:
-        execute_query(cursor,"""
-            SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total 
-            FROM stock_out 
-            WHERE sale_type = 'direct' AND date LIKE ?
-        """, (today + '%',))
-    direct_today_data = cursor.fetchone()
-    direct_today_count = direct_today_data['count'] or 0
-    direct_today_ca = direct_today_data['total'] or 0
-    
-    # Total du jour
-    orders_today = orders_today_count + direct_today_count
-    ca_jour = orders_today_ca + direct_today_ca
-    
-    # CA du mois
     month_start = datetime.now().replace(day=1).strftime('%Y-%m-%d')
     
+    # ✅ Une seule requête pour les produits (regroupée)
+    execute_query(cursor, """
+        SELECT 
+            COUNT(*) as total_products,
+            COALESCE(SUM(stock), 0) as total_stock,
+            COUNT(CASE WHEN stock <= stock_min THEN 1 END) as alert_products
+        FROM products 
+        WHERE active = 1
+    """)
+    product_stats = cursor.fetchone()
+    
+    # ✅ Une seule requête pour les ventes du jour
     if DATABASE_URL:
-        execute_query(cursor,"""
-            SELECT COALESCE(SUM(total), 0) as total 
-            FROM orders 
-            WHERE DATE(date) >= %s AND status NOT IN ('cancelled', 'pending')
-        """, (month_start,))
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT COUNT(*) FROM orders WHERE DATE(date) = %s AND status NOT IN ('cancelled', 'pending')), 0) as orders_count,
+                COALESCE((SELECT SUM(total) FROM orders WHERE DATE(date) = %s AND status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT COUNT(*) FROM stock_out WHERE sale_type = 'direct' AND DATE(date) = %s), 0) as direct_count,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct' AND DATE(date) = %s), 0) as direct_ca
+        """, (today, today, today, today))
     else:
-        execute_query(cursor,"""
-            SELECT COALESCE(SUM(total), 0) as total 
-            FROM orders 
-            WHERE date >= ? AND status NOT IN ('cancelled', 'pending')
-        """, (month_start,))
-    orders_month_ca = cursor.fetchone()['total'] or 0
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT COUNT(*) FROM orders WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')), 0) as orders_count,
+                COALESCE((SELECT SUM(total) FROM orders WHERE date LIKE ? AND status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT COUNT(*) FROM stock_out WHERE sale_type = 'direct' AND date LIKE ?), 0) as direct_count,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct' AND date LIKE ?), 0) as direct_ca
+        """, (today + '%', today + '%', today + '%', today + '%'))
+    today_stats = cursor.fetchone()
     
+    # ✅ Une seule requête pour le CA du mois
     if DATABASE_URL:
-        execute_query(cursor,"""
-            SELECT COALESCE(SUM(total), 0) as total 
-            FROM stock_out 
-            WHERE sale_type = 'direct' AND DATE(date) >= %s
-        """, (month_start,))
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT SUM(total) FROM orders WHERE DATE(date) >= %s AND status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct' AND DATE(date) >= %s), 0) as direct_ca
+        """, (month_start, month_start))
     else:
-        execute_query(cursor,"""
-            SELECT COALESCE(SUM(total), 0) as total 
-            FROM stock_out 
-            WHERE sale_type = 'direct' AND date >= ?
-        """, (month_start,))
-    direct_month_ca = cursor.fetchone()['total'] or 0
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT SUM(total) FROM orders WHERE date >= ? AND status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct' AND date >= ?), 0) as direct_ca
+        """, (month_start, month_start))
+    month_stats = cursor.fetchone()
     
-    ca_mois = orders_month_ca + direct_month_ca
-    
-    # CA total
-    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM orders WHERE status NOT IN ('cancelled', 'pending')")
-    orders_total_ca = cursor.fetchone()['total'] or 0
-    
-    execute_query(cursor,"SELECT COALESCE(SUM(total), 0) as total FROM stock_out WHERE sale_type = 'direct'")
-    direct_total_ca = cursor.fetchone()['total'] or 0
-    
-    ca_total = orders_total_ca + direct_total_ca
+    # ✅ Une seule requête pour le CA total
+    if DATABASE_URL:
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT SUM(total) FROM orders WHERE status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct'), 0) as direct_ca
+        """)
+    else:
+        execute_query(cursor, """
+            SELECT 
+                COALESCE((SELECT SUM(total) FROM orders WHERE status NOT IN ('cancelled', 'pending')), 0) as orders_ca,
+                COALESCE((SELECT SUM(total) FROM stock_out WHERE sale_type = 'direct'), 0) as direct_ca
+        """)
+    total_stats = cursor.fetchone()
     
     # Bénéfice total (seulement pour l'admin)
     profit_total = 0
     if is_admin:
-        execute_query(cursor,"SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
+        execute_query(cursor, "SELECT COALESCE(SUM(profit), 0) as total FROM stock_out")
         profit_total = cursor.fetchone()['total'] or 0
     
     conn.close()
     
     return jsonify({
-        'products': products,
-        'stock_total': stock_total,
-        'alert_products': alert_products,
-        'orders_today': orders_today,
-        'ca_jour': ca_jour,
-        'ca_mois': ca_mois,
-        'ca_total': ca_total,
+        'products': product_stats['total_products'],
+        'stock_total': product_stats['total_stock'],
+        'alert_products': product_stats['alert_products'],
+        'orders_today': today_stats['orders_count'] + today_stats['direct_count'],
+        'ca_jour': today_stats['orders_ca'] + today_stats['direct_ca'],
+        'ca_mois': month_stats['orders_ca'] + month_stats['direct_ca'],
+        'ca_total': total_stats['orders_ca'] + total_stats['direct_ca'],
         'profit_total': profit_total,
         'is_admin': is_admin
     })
