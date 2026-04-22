@@ -7537,6 +7537,7 @@ def admin_settings_save():
 # ==================== PAGES FRONT ====================
 
 @app.route('/products')
+@cache.cached(timeout=300)
 def products_page():
     conn = get_db()
     cursor = conn.cursor()
@@ -7559,6 +7560,7 @@ def products_page():
                                   page_title='products')
 
 @app.route('/promotions')
+@cache.cached(timeout=300)
 def promotions_page():
     conn = get_db()
     cursor = conn.cursor()
@@ -7580,6 +7582,7 @@ def promotions_page():
                           settings=settings, 
                           page_title='promotions')
 @app.route('/about')
+@cache.cached(timeout=300)
 def about_page():
     conn = get_db()
     cursor = conn.cursor()
@@ -7609,6 +7612,7 @@ def about_page():
                                   team_members=team_members)
 
 @app.route('/contact')
+@cache.cached(timeout=300)
 def contact_page():
     conn = get_db()
     cursor = conn.cursor()
@@ -7697,6 +7701,7 @@ def product_detail(slug):
                               settings=settings)
 
 @app.route('/category/<slug>')
+@cache.cached(timeout=300)
 def category_page(slug):
     conn = get_db()
     cursor = conn.cursor()
