@@ -1768,19 +1768,38 @@ function showStockInModal() {
         closeModal();
     });
 }
+// ====== SORTIES STOCK  ==========
 // ====== SORTIES STOCK (SANS BOUTON NOUVELLE VENTE) ==========
 async function loadStockOut() {
     setActiveTab('stock-out', 'Sorties stock');
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     try {
+        // 🔐 Récupérer le rôle
+        let userRole = '{{ session.role }}';
+        let isAdmin = (userRole === 'admin');
+        
         let response = await fetch('/admin/stock-out');
         let stock = await response.json();
         allStockData = stock;
         
         console.log("Ventes chargées:", stock.length);
         
-        // Date par défaut = aujourd'hui
-        let today = new Date().toISOString().split('T')[0];
+        // 📅 Définir les dates par défaut selon le rôle
+        let today = new Date();
+        let startDateStr, endDateStr;
+        
+        if (isAdmin) {
+            // Admin : voit le mois en cours
+            let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            startDateStr = firstDay.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        } else {
+            // Vendeur : voit seulement les 2 derniers jours
+            let twoDaysAgo = new Date(today);
+            twoDaysAgo.setDate(today.getDate() - 2);
+            startDateStr = twoDaysAgo.toISOString().split('T')[0];
+            endDateStr = today.toISOString().split('T')[0];
+        }
         
         let html = `
             <style>
@@ -1795,6 +1814,7 @@ async function loadStockOut() {
                     .filter-row { flex-direction: column; }
                     .filter-row > div { width: 100%; }
                 }
+                ${!isAdmin ? `.date-readonly input { background-color: #f5f5f5; cursor: not-allowed; }` : ''}
             </style>
             
             <div class="card">
@@ -1810,17 +1830,17 @@ async function loadStockOut() {
                 <div class="filters-bar" style="padding: 15px;">
                     <div class="filters-grid-mobile">
                         <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 130px;">
+                            <div style="flex: 1; min-width: 130px;" class="${!isAdmin ? 'date-readonly' : ''}">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date début</label>
-                                <input type="date" id="filterStartDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                                <input type="date" id="filterStartDate" class="form-control" value="${startDateStr}" ${!isAdmin ? 'readonly' : ''}>
                             </div>
-                            <div style="flex: 1; min-width: 130px;">
+                            <div style="flex: 1; min-width: 130px;" class="${!isAdmin ? 'date-readonly' : ''}">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">📅 Date fin</label>
-                                <input type="date" id="filterEndDate" class="form-control" value="${today}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                                <input type="date" id="filterEndDate" class="form-control" value="${endDateStr}" ${!isAdmin ? 'readonly' : ''}>
                             </div>
                             <div style="flex: 1; min-width: 130px;">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">🔄 Type</label>
-                                <select id="filterType" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
+                                <select id="filterType" class="form-control">
                                     <option value="all">📊 Tous</option>
                                     <option value="direct">🛒 Vente directe</option>
                                     <option value="order">📦 Commande en ligne</option>
@@ -1830,7 +1850,7 @@ async function loadStockOut() {
                         <div class="filter-row" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                             <div style="flex: 1; min-width: 130px;">
                                 <label style="font-size: 12px; display: block; margin-bottom: 5px;">📆 Période rapide</label>
-                                <select id="filterPeriod" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px;">
+                                <select id="filterPeriod" class="form-control">
                                     <option value="">🔽 Choisir...</option>
                                     <option value="today">📅 Aujourd'hui</option>
                                     <option value="yesterday">📅 Hier</option>
@@ -1876,6 +1896,7 @@ async function loadStockOut() {
         console.error('Erreur:', e);
         document.getElementById('dynamicContent').innerHTML = '<div class="card"><div class="text-center text-danger">❌ Erreur: ' + e.message + '</div></div>';
     }
+}
 }
 function updateStockDisplay(data) {
     console.log("updateStockDisplay appelé avec", data.length, "éléments");
@@ -2040,12 +2061,36 @@ function applyStockFilters() {
     let endDate = document.getElementById('filterEndDate').value;
     let filterType = document.getElementById('filterType').value;
     
+    // 🔐 Vérifier le rôle
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
+    
+    // Si vendeur, forcer les dates à 2 jours max
+    if (!isAdmin) {
+        let today = new Date();
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        
+        let maxStartDate = twoDaysAgo.toISOString().split('T')[0];
+        let todayStr = today.toISOString().split('T')[0];
+        
+        let startInput = document.getElementById('filterStartDate');
+        let endInput = document.getElementById('filterEndDate');
+        
+        if (startDate && startDate < maxStartDate) {
+            startDate = maxStartDate;
+            if (startInput) startInput.value = maxStartDate;
+        }
+        if (endDate && endDate > todayStr) {
+            endDate = todayStr;
+            if (endInput) endInput.value = todayStr;
+        }
+    }
+    
     let filtered = [...allStockData];
     
-    // Fonction pour extraire la date au format YYYY-MM-DD
     function extractDate(dateStr) {
         if (!dateStr) return '';
-        // Essaie de parser différents formats
         let d = new Date(dateStr);
         if (!isNaN(d.getTime())) {
             return d.toISOString().split('T')[0];
@@ -2078,11 +2123,33 @@ function applyStockFilters() {
     updateStockDisplay(filtered);
 }
 function resetStockFilters() {
-    let today = new Date().toISOString().split('T')[0];
-    document.getElementById('filterStartDate').value = today;
-    document.getElementById('filterEndDate').value = today;
-    document.getElementById('filterType').value = 'all';
-    document.getElementById('filterPeriod').value = '';
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
+    
+    let today = new Date();
+    let startDateStr, endDateStr;
+    
+    if (isAdmin) {
+        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        startDateStr = firstDay.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    } else {
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        startDateStr = twoDaysAgo.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    }
+    
+    let startInput = document.getElementById('filterStartDate');
+    let endInput = document.getElementById('filterEndDate');
+    let filterType = document.getElementById('filterType');
+    let filterPeriod = document.getElementById('filterPeriod');
+    
+    if (startInput) startInput.value = startDateStr;
+    if (endInput) endInput.value = endDateStr;
+    if (filterType) filterType.value = 'all';
+    if (filterPeriod) filterPeriod.value = '';
+    
     applyStockFilters();
 }
 
