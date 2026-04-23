@@ -488,33 +488,32 @@
             container.innerHTML = '<div class="empty-cart">🛒 Panier vide</div>';
             return;
         }
-        container.innerHTML = cart.map((item, index) => `
-            <div class="cart-item" data-index="${index}">
+        container.innerHTML = cart.map((item) => `
+            <div class="cart-item" data-product-id="${item.id}">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
                 </div>
                 <div class="cart-item-quantity">
-                    <button class="cart-qty-btn" onclick="updateQuantity(${index}, -1)">-</button>
-                    <span>${item.quantity}</span>
-                    <button class="cart-qty-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                    <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', -1)">-</button>
+                    <span id="qty-${item.id}">${item.quantity}</span>
+                    <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
                 </div>
-                <input type="number" step="0.01" class="cart-item-price-input" value="${item.price.toFixed(2)}" onchange="updatePrice(${index}, this.value)">
+                <input type="number" step="0.01" class="cart-item-price-input" value="${item.price.toFixed(2)}" onchange="updatePrice('${item.id}', this.value)">
                 <div class="cart-item-total">${(item.price * item.quantity).toFixed(2)} DNT</div>
-                <button class="cart-item-remove" onclick="removeFromCart(${index})"><i class="fas fa-trash"></i></button>
+                <button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
     }
 
-    function updateQuantity(index, delta) {
-        const item = cart[index];
+    function updateQuantity(productId, delta) {
+        const item = cart.find(i => i.id == productId);
         if (item) {
             const newQty = item.quantity + delta;
-            // Trouver le produit original pour vérifier le stock
-            const product = products.find(p => p.id == item.id);
+            const product = products.find(p => p.id == productId);
             const maxStock = product ? product.stock : 999;
             
             if (newQty <= 0) {
-                cart.splice(index, 1);
+                cart = cart.filter(i => i.id != productId);
             } else if (newQty > maxStock) {
                 alert(`❌ Stock insuffisant !\n\nProduit: ${item.name}\nStock disponible: ${maxStock} unités`);
                 return;
@@ -526,21 +525,24 @@
         updateTotal();
     }
 
-    function updatePrice(index, newPrice) {
-        const item = cart[index];
+    function updatePrice(productId, newPrice) {
+        const item = cart.find(i => i.id == productId);
         if (item) {
-            item.price = parseFloat(newPrice) || 0;
+            const newPriceValue = parseFloat(newPrice) || 0;
+            if (newPriceValue <= 0) {
+                alert('Le prix doit être supérieur à 0');
+                return;
+            }
+            item.price = newPriceValue;
         }
         renderCart();
         updateTotal();
     }
-
-    function removeFromCart(index) {
-        cart.splice(index, 1);
+    function removeFromCart(productId) {
+        cart = cart.filter(i => i.id != productId);
         renderCart();
         updateTotal();
     }
-
     function clearCart() {
         if (confirm('Vider le panier ?')) {
             cart = [];
