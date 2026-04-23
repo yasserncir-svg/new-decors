@@ -281,6 +281,124 @@
             .total-amount { font-size: 22px; }
             .numpad-btn { padding: 10px; font-size: 18px; }
         }
+            /* ✅ AJOUTE CE CSS ICI (avant </style>) */
+        .cart-qty-input {
+            width: 55px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 13px;
+        }
+
+        .cart-qty-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+            .custom-alert {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .custom-alert-content {
+            background: white;
+            border-radius: 24px;
+            max-width: 350px;
+            width: 90%;
+            padding: 25px;
+            text-align: center;
+            animation: fadeInUp 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border-top: 5px solid #e74c3c;
+        }
+        
+        .custom-alert-icon {
+            font-size: 48px;
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        
+        .custom-alert-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #e74c3c;
+        }
+        
+        .custom-alert-message {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .custom-alert-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        
+        .custom-alert-details p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .custom-alert-details .total {
+            color: #e74c3c;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .custom-alert-details .received {
+            color: #f39c12;
+            font-weight: 700;
+        }
+        
+        .custom-alert-details .missing {
+            color: #e74c3c;
+            font-weight: 700;
+        }
+        
+        .custom-alert-button {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .custom-alert-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231,76,60,0.3);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -488,21 +606,25 @@
             container.innerHTML = '<div class="empty-cart">🛒 Panier vide</div>';
             return;
         }
-        container.innerHTML = cart.map((item) => `
+        container.innerHTML = cart.map((item) => {
+            const product = products.find(p => p.id == item.id);
+            const maxStock = product ? product.stock : 999;
+            
+            return `
             <div class="cart-item" data-product-id="${item.id}">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
                 </div>
                 <div class="cart-item-quantity">
                     <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', -1)">-</button>
-                    <span id="qty-${item.id}">${item.quantity}</span>
+                    <input type="number" class="cart-qty-input" id="qty-${item.id}" value="${item.quantity}" min="1" max="${maxStock}" style="width: 55px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 6px;" onchange="updateQuantityManually('${item.id}', this.value)">
                     <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
                 </div>
                 <input type="number" step="0.01" class="cart-item-price-input" value="${item.price.toFixed(2)}" onchange="updatePrice('${item.id}', this.value)">
                 <div class="cart-item-total">${(item.price * item.quantity).toFixed(2)} DNT</div>
                 <button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     function updateQuantity(productId, delta) {
@@ -521,6 +643,33 @@
                 item.quantity = newQty;
             }
         }
+        renderCart();
+        updateTotal();
+    }
+    function updateQuantityManually(productId, newQuantity) {
+        let qty = parseInt(newQuantity);
+        
+        // Vérifier si la valeur est valide
+        if (isNaN(qty) || qty < 1) {
+            qty = 1;
+        }
+        
+        const item = cart.find(i => i.id == productId);
+        if (!item) return;
+        
+        const product = products.find(p => p.id == productId);
+        const maxStock = product ? product.stock : 999;
+        
+        // Vérifier que la quantité ne dépasse pas le stock
+        if (qty > maxStock) {
+            alert(`❌ Stock insuffisant !\n\nProduit: ${item.name}\nStock disponible: ${maxStock} unités\nQuantité demandée: ${qty}`);
+            // Remettre la valeur correcte
+            document.getElementById(`qty-${productId}`).value = item.quantity;
+            return;
+        }
+        
+        // Mettre à jour la quantité
+        item.quantity = qty;
         renderCart();
         updateTotal();
     }
