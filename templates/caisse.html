@@ -443,6 +443,66 @@
                 font-size: 12px !important;
             }
         }
+        /* Style pour le panier avec prix modifiable */
+        .cart-item {
+            display: flex;
+            gap: 10px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        .cart-item-info {
+            flex: 1;
+            min-width: 120px;
+        }
+        .cart-item-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .cart-item-price, .cart-item-quantity, .cart-item-total {
+            flex: 1;
+            min-width: 80px;
+        }
+        .cart-item-price-input, .cart-qty-input {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 13px;
+        }
+        .cart-item-remove {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+        
+        @media (max-width: 600px) {
+            .cart-item {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .cart-item-price, .cart-item-quantity, .cart-item-total {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .cart-item-price label, .cart-item-quantity label, .cart-item-total label {
+                width: 80px;
+            }
+            .cart-item-remove {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -657,16 +717,23 @@
             <div class="cart-item" data-product-id="${item.id}">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
-                    <div class="cart-item-unit-price" style="font-size: 11px; color: var(--primary-dark); margin-top: 4px;">
-                        💰 ${item.price.toFixed(2)} DNT / unité
-                    </div>
+                </div>
+                <div class="cart-item-price">
+                    <label style="font-size: 11px; color: #666;">💰 Prix unitaire</label>
+                    <input type="number" step="0.01" class="cart-item-price-input" value="${item.price.toFixed(2)}" onchange="updatePrice('${item.id}', this.value)" style="width: 90px; padding: 6px; border: 1px solid #ddd; border-radius: 6px; text-align: right;">
                 </div>
                 <div class="cart-item-quantity">
-                    <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', -1)">-</button>
-                    <input type="number" class="cart-qty-input" id="qty-${item.id}" value="${item.quantity}" min="1" max="${maxStock}" style="width: 55px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 6px;" onchange="updateQuantityManually('${item.id}', this.value)">
-                    <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+                    <label style="font-size: 11px; color: #666;">📦 Qté</label>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', -1)">-</button>
+                        <input type="number" class="cart-qty-input" id="qty-${item.id}" value="${item.quantity}" min="1" max="${maxStock}" style="width: 55px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 6px;" onchange="updateQuantityManually('${item.id}', this.value)">
+                        <button class="cart-qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+                    </div>
                 </div>
-                <div class="cart-item-total">${(item.price * item.quantity).toFixed(2)} DNT</div>
+                <div class="cart-item-total">
+                    <label style="font-size: 11px; color: #666;">💵 Total</label>
+                    <div style="font-weight: 700; color: var(--success); font-size: 14px;">${(item.price * item.quantity).toFixed(2)} DNT</div>
+                </div>
                 <button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button>
             </div>
         `}).join('');
