@@ -2032,7 +2032,7 @@ function updateStockOutDisplay(data) {
     }
     
     if (isMobile) {
-        // 📱 Version mobile : cartes avec vendeur et heure
+        // 📱 Version mobile : cartes avec vendeur, heure et prix unitaire
         let cardsHtml = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
         for (let s of data) {
             let dateTimeStr = formatDateTime(s.date);
@@ -2051,9 +2051,10 @@ function updateStockOutDisplay(data) {
                         <div style="font-size: 12px; color: #666;"><i class="fas fa-phone"></i> ${s.client_phone || '-'}</div>
                         <div style="font-size: 12px; color: #666;"><i class="fas fa-user-tie"></i> Vendeur: ${s.seller_name || 'Système'}</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 8px;">
-                        <div><strong>Qté: ${s.quantity}</strong></div>
-                        <div><strong style="color: #27ae60;">${(s.total || 0).toFixed(2)} DNT</strong></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; border-top: 1px solid #eee; padding-top: 8px;">
+                        <div><strong>💰 Prix unitaire:</strong> ${(s.sale_price || 0).toFixed(2)} DNT</div>
+                        <div><strong>📦 Qté:</strong> ${s.quantity}</div>
+                        <div><strong>💵 Total:</strong> <span style="color:#27ae60;">${(s.total || 0).toFixed(2)} DNT</span></div>
                     </div>
                     ${isAdmin ? `<div style="font-size: 11px; margin-top: 5px;">💰 Bénéfice: ${(s.profit || 0).toFixed(2)} DNT</div>` : ''}
                 </div>
@@ -2063,10 +2064,10 @@ function updateStockOutDisplay(data) {
         document.getElementById('stockOutTableContainer').innerHTML = cardsHtml;
         
     } else {
-        // 💻 Version desktop : tableau avec vendeur et heure
+        // 💻 Version desktop : tableau avec vendeur, heure et prix unitaire
         let tableHtml = `
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px;">
                     <thead>
                         <tr style="background: #f5f5f5;">
                             <th style="padding: 10px;">Date/Heure</th>
@@ -2074,6 +2075,7 @@ function updateStockOutDisplay(data) {
                             <th style="padding: 10px;">Produit</th>
                             <th style="padding: 10px;">Client</th>
                             <th style="padding: 10px;">Tél</th>
+                            <th style="padding: 10px;">Prix unit.</th>
                             <th style="padding: 10px;">Qté</th>
                             <th style="padding: 10px;">Total</th>
                             <th style="padding: 10px;">Vendeur</th>
@@ -2096,14 +2098,15 @@ function updateStockOutDisplay(data) {
                     <td style="padding: 10px;"><strong>${escapeHtml(s.product_name || '-')}</strong></td>
                     <td style="padding: 10px;">${escapeHtml(s.client_name || '-')}</td>
                     <td style="padding: 10px;">${s.client_phone || '-'}</td>
+                    <td style="padding: 10px;">${(s.sale_price || 0).toFixed(2)} DNT</span></td>
                     <td style="padding: 10px; text-align: center;">${s.quantity}</td>
-                    <td style="padding: 10px; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</td>
+                    <td style="padding: 10px; color: #27ae60; font-weight: 600;">${(s.total || 0).toFixed(2)} DNT</span></td>
                     <td style="padding: 10px;">${s.seller_name || 'Système'}</td>
             `;
             
             if (isAdmin) {
                 let profitColor = (s.profit || 0) >= 0 ? '#27ae60' : '#e74c3c';
-                tableHtml += `<td style="padding: 10px; color: ${profitColor};">${(s.profit || 0).toFixed(2)} DNT</td>`;
+                tableHtml += `<td style="padding: 10px; color: ${profitColor};">${(s.profit || 0).toFixed(2)} DNT</span></td>`;
             }
             
             tableHtml += `</tr>`;
