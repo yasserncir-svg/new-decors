@@ -465,13 +465,13 @@
 
     function addToCart(id, name, price, stock) {
         if (stock <= 0) {
-            alert('Stock insuffisant');
+            alert('❌ Stock insuffisant');
             return;
         }
         const existing = cart.find(item => item.id === id);
         if (existing) {
             if (existing.quantity + 1 > stock) {
-                alert('Stock insuffisant');
+                alert(`❌ Stock insuffisant !\n\nProduit: ${name}\nStock disponible: ${stock} unités`);
                 return;
             }
             existing.quantity++;
@@ -509,8 +509,15 @@
         const item = cart[index];
         if (item) {
             const newQty = item.quantity + delta;
+            // Trouver le produit original pour vérifier le stock
+            const product = products.find(p => p.id == item.id);
+            const maxStock = product ? product.stock : 999;
+            
             if (newQty <= 0) {
                 cart.splice(index, 1);
+            } else if (newQty > maxStock) {
+                alert(`❌ Stock insuffisant !\n\nProduit: ${item.name}\nStock disponible: ${maxStock} unités`);
+                return;
             } else {
                 item.quantity = newQty;
             }
@@ -553,12 +560,19 @@
         const received = parseFloat(document.getElementById('amountReceived').value) || 0;
         const change = received - total;
         const changeSpan = document.getElementById('changeAmount');
+        const submitBtn = document.querySelector('.btn-submit');
+        const totalSpan = document.getElementById('totalAmount');
+        
         if (change >= 0) {
             changeSpan.innerHTML = change.toFixed(2) + ' DNT';
             changeSpan.style.color = '#27ae60';
+            if (submitBtn) submitBtn.style.opacity = '1';
+            if (totalSpan) totalSpan.style.color = '';
         } else {
-            changeSpan.innerHTML = 'Manque ' + Math.abs(change).toFixed(2) + ' DNT';
+            changeSpan.innerHTML = '⚠️ Manque ' + Math.abs(change).toFixed(2) + ' DNT';
             changeSpan.style.color = '#e74c3c';
+            if (submitBtn) submitBtn.style.opacity = '0.6';
+            if (totalSpan) totalSpan.style.color = '#e74c3c';
         }
     }
 
@@ -622,37 +636,53 @@
             alert("Autorisez les popups pour imprimer");
         }
     }
-
     async function validateSale() {
         if (cart.length === 0) {
             alert('Panier vide');
             return;
         }
+        
         const clientName = document.getElementById('clientName').value.trim();
         const clientPhone = document.getElementById('clientPhone').value.trim();
         const clientAddress = document.getElementById('clientAddress').value.trim();
+        
         if (!clientName || !clientPhone) {
             alert('Nom et téléphone requis');
             return;
         }
+        
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const amountReceived = parseFloat(document.getElementById('amountReceived').value) || 0;
         const change = amountReceived - total;
+        
+        // ✅ BLOQUER LA VENTE si montant insuffisant
         if (amountReceived < total) {
-            if (!confirm(`Manque ${(total - amountReceived).toFixed(2)} DNT. Continuer ?`)) {
+            alert(`❌ Montant insuffisant !\n\nTotal: ${total.toFixed(2)} DNT\nReçu: ${amountReceived.toFixed(2)} DNT\nManque: ${(total - amountReceived).toFixed(2)} DNT`);
+            document.getElementById('amountReceived').focus();
+            return;
+        }
+        
+        // Vérification du stock
+        for (let item of cart) {
+            const product = products.find(p => p.id == item.id);
+            if (!product || product.stock < item.quantity) {
+                alert(`Stock insuffisant pour: ${item.name}\nStock disponible: ${product?.stock || 0}`);
                 return;
             }
         }
+        
+        // Enregistrement des ventes
         for (let item of cart) {
             const formData = new FormData();
             formData.append('product_id', item.id);
             formData.append('client_name', clientName);
             formData.append('client_phone', clientPhone);
-            formData.append('client_email', clientAddress);
+            formData.append('client_email', '');
             formData.append('client_address', clientAddress);
             formData.append('quantity', item.quantity);
             formData.append('sale_price', item.price);
             formData.append('notes', `Vente caisse - ${new Date().toLocaleString()}`);
+            
             const response = await fetch('/admin/stock-out', { method: 'POST', body: formData });
             const result = await response.json();
             if (!result.success) {
@@ -660,9 +690,13 @@
                 return;
             }
         }
+        
+        // Impression du ticket
         const ticketNumber = document.getElementById('ticketNumberDisplay').innerText;
         const productList = cart.map(item => `${item.name} x${item.quantity}`).join(', ');
         printTicket(ticketNumber, clientName, clientPhone, clientAddress, productList, total, amountReceived, change);
+        
+        // Réinitialisation
         cart = [];
         renderCart();
         updateTotal();
@@ -670,15 +704,16 @@
         document.getElementById('clientPhone').value = '';
         document.getElementById('clientAddress').value = '';
         document.getElementById('amountReceived').value = '0';
+        
         const match = ticketNumber.match(/\d+$/);
         if (match) {
             const num = parseInt(match[0]) + 1;
             document.getElementById('ticketNumberDisplay').innerText = `TICKET-${num.toString().padStart(3, '0')}`;
         }
+        
         await loadProducts();
         showToast('✅ Vente enregistrée !');
     }
-
     document.getElementById('searchProduct').addEventListener('input', renderProducts);
     document.querySelectorAll('.category-tab').forEach(btn => {
         btn.addEventListener('click', () => {
