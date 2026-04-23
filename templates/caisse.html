@@ -76,6 +76,7 @@
             padding-bottom: 10px;
             margin-bottom: 15px;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
         }
         .category-tab {
             background: var(--white);
@@ -87,6 +88,7 @@
             font-size: 13px;
             white-space: nowrap;
             transition: var(--transition);
+            flex-shrink: 0;
         }
         .category-tab.active { background: var(--primary); color: var(--dark); }
 
@@ -281,7 +283,8 @@
             .total-amount { font-size: 22px; }
             .numpad-btn { padding: 10px; font-size: 18px; }
         }
-            /* ✅ AJOUTE CE CSS ICI (avant </style>) */
+
+        /* Styles pour le champ quantité */
         .cart-qty-input {
             width: 55px;
             text-align: center;
@@ -290,12 +293,13 @@
             padding: 6px;
             font-size: 13px;
         }
-
         .cart-qty-input:focus {
             outline: none;
             border-color: var(--primary);
         }
-            .custom-alert {
+
+        /* Alerte personnalisée */
+        .custom-alert {
             position: fixed;
             top: 0;
             left: 0;
@@ -309,7 +313,6 @@
             justify-content: center;
             font-family: 'Inter', sans-serif;
         }
-        
         .custom-alert-content {
             background: white;
             border-radius: 24px;
@@ -321,27 +324,23 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             border-top: 5px solid #e74c3c;
         }
-        
         .custom-alert-icon {
             font-size: 48px;
             color: #e74c3c;
             margin-bottom: 15px;
         }
-        
         .custom-alert-title {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 10px;
             color: #e74c3c;
         }
-        
         .custom-alert-message {
             font-size: 14px;
             color: #666;
             margin-bottom: 15px;
             line-height: 1.5;
         }
-        
         .custom-alert-details {
             background: #f8f9fa;
             border-radius: 12px;
@@ -349,28 +348,23 @@
             margin: 15px 0;
             text-align: left;
         }
-        
         .custom-alert-details p {
             margin: 5px 0;
             font-size: 14px;
         }
-        
         .custom-alert-details .total {
             color: #e74c3c;
             font-weight: 700;
             font-size: 16px;
         }
-        
         .custom-alert-details .received {
             color: #f39c12;
             font-weight: 700;
         }
-        
         .custom-alert-details .missing {
             color: #e74c3c;
             font-weight: 700;
         }
-        
         .custom-alert-button {
             background: linear-gradient(135deg, #e74c3c, #c0392b);
             color: white;
@@ -383,12 +377,10 @@
             transition: all 0.3s;
             margin-top: 10px;
         }
-        
         .custom-alert-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(231,76,60,0.3);
         }
-        
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -397,6 +389,25 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
+            }
+        }
+
+        /* Responsive pour l'alerte sur mobile */
+        @media (max-width: 480px) {
+            .custom-alert-content {
+                width: 90%;
+                padding: 20px;
+                margin: 20px;
+            }
+            .custom-alert-title {
+                font-size: 18px;
+            }
+            .custom-alert-details p {
+                font-size: 12px;
+            }
+            .custom-alert-button {
+                padding: 10px 20px;
+                font-size: 13px;
             }
         }
     </style>
