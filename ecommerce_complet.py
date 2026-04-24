@@ -6522,7 +6522,7 @@ def admin_stock_in_update():
     cursor = conn.cursor()
     
     # Récupérer l'ancienne entrée
-    execute_query(cursor, "SELECT quantity, purchase_price FROM stock_in WHERE id = ?", (entry_id,))
+    execute_query(cursor, "SELECT quantity, purchase_price FROM stock_in WHERE id = %s", (entry_id,))
     old_entry = cursor.fetchone()
     
     if not old_entry:
@@ -6535,26 +6535,28 @@ def admin_stock_in_update():
     # Calculer la différence de quantité
     quantity_diff = new_quantity - old_quantity
     
-    # 1. Mettre à jour l'entrée stock
+    # 1. Mettre à jour l'entrée stock (UNIQUEMENT les colonnes qui existent)
     execute_query(cursor, """
         UPDATE stock_in 
-        SET quantity = ?, purchase_price = ?, total = quantity * purchase_price
-        WHERE id = ?
-    """, (new_quantity, new_purchase_price, entry_id))
+        SET quantity = %s, 
+            purchase_price = %s, 
+            total = %s * %s
+        WHERE id = %s
+    """, (new_quantity, new_purchase_price, new_quantity, new_purchase_price, entry_id))
     
-    # 2. Mettre à jour le produit (stock et prix)
+    # 2. Mettre à jour le produit
     execute_query(cursor, """
         UPDATE products 
-        SET stock = stock + ?,
-            prix_achat = ?,
-            prix_vente = ?
-        WHERE id = ?
+        SET stock = stock + %s,
+            prix_achat = %s,
+            prix_vente = %s
+        WHERE id = %s
     """, (quantity_diff, new_purchase_price, new_sale_price, product_id))
     
     # 3. Log l'action
     execute_query(cursor, """
         INSERT INTO user_logs (user_id, action, ip_address)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (session.get('user_id'), f"modification_entree_stock: ID {entry_id} - Qté: {old_quantity}→{new_quantity} - PA: {old_purchase_price}→{new_purchase_price}", request.remote_addr))
     
     conn.commit()
