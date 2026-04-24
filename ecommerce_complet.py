@@ -6483,7 +6483,7 @@ def admin_supplier_delete(sup_id):
 
 # ==================== API STOCK ====================
 
-from flask import make_response  # Ajoute en haut du fichier si pas déjà
+from flask import make_response
 
 @app.route('/admin/stock-in')
 @login_required
@@ -6500,15 +6500,69 @@ def admin_stock_in():
     stock = cursor.fetchall()
     conn.close()
     
-    # ✅ AJOUTE CES LIGNES POUR ÉVITER LE CACHE
     response = make_response(jsonify(stock))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-
+@app.route('/admin/stock-in/update', methods=['POST'])
+@login_required
+def admin_stock_in_update():
+    # Vérifier que l'utilisateur est admin
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Action réservée à l\'administrateur'}), 403
+    
+    entry_id = request.form.get('id')
+    product_id = request.form.get('product_id')
+    new_quantity = int(request.form.get('quantity'))
+    new_purchase_price = float(request.form.get('purchase_price'))
+    new_sale_price = float(request.form.get('prix_vente'))
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Récupérer l'ancienne entrée
+    execute_query(cursor, "SELECT quantity, purchase_price FROM stock_in WHERE id = ?", (entry_id,))
+    old_entry = cursor.fetchone()
+    
+    if not old_entry:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Entrée non trouvée'})
+    
+    old_quantity = old_entry['quantity']
+    old_purchase_price = old_entry['purchase_price']
+    
+    # Calculer la différence de quantité
+    quantity_diff = new_quantity - old_quantity
+    
+    # 1. Mettre à jour l'entrée stock
+    execute_query(cursor, """
+        UPDATE stock_in 
+        SET quantity = ?, purchase_price = ?, total = quantity * purchase_price
+        WHERE id = ?
+    """, (new_quantity, new_purchase_price, entry_id))
+    
+    # 2. Mettre à jour le produit (stock et prix)
+    execute_query(cursor, """
+        UPDATE products 
+        SET stock = stock + ?,
+            prix_achat = ?,
+            prix_vente = ?
+        WHERE id = ?
+    """, (quantity_diff, new_purchase_price, new_sale_price, product_id))
+    
+    # 3. Log l'action
+    execute_query(cursor, """
+        INSERT INTO user_logs (user_id, action, ip_address)
+        VALUES (?, ?, ?)
+    """, (session.get('user_id'), f"modification_entree_stock: ID {entry_id} - Qté: {old_quantity}→{new_quantity} - PA: {old_purchase_price}→{new_purchase_price}", request.remote_addr))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': 'Entrée modifiée'})
+    
 from datetime import datetime 
-
 @app.route('/admin/stock-in', methods=['POST'])
 @login_required
 def admin_stock_in_save():
