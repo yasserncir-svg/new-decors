@@ -1232,41 +1232,53 @@ async function loadStockIn() {
     document.getElementById('dynamicContent').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Chargement...</p></div>';
     
     try {
-        let [stock, products, suppliers] = await Promise.all([
+        let [stock, products, suppliers, categories] = await Promise.all([
             fetch('/admin/stock-in?t=' + Date.now()).then(r => r.json()),
             fetch('/admin/products?t=' + Date.now()).then(r => r.json()),
-            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json())
+            fetch('/admin/suppliers?t=' + Date.now()).then(r => r.json()),
+            fetch('/admin/categories?t=' + Date.now()).then(r => r.json())
         ]);
         
         window.stockProducts = products.products || [];
         window.allStockData = stock;
         window.suppliersList = suppliers;
+        window.subcategoriesData = categories.subcategories || [];
         
         // 🔐 Récupérer le rôle de l'utilisateur
         let userRole = '{{ session.role }}';
         let isAdmin = (userRole === 'admin');
         
-        // Générer les options uniques pour les filtres
-        let uniqueProducts = [...new Set(stock.map(s => s.product_name).filter(Boolean))];
-        let uniqueSuppliers = [...new Set(stock.map(s => s.supplier_name).filter(Boolean))];
+        // Générer les options uniques pour les sous-catégories
+        let uniqueSubcategories = [...new Set(
+            stock.map(s => {
+                let product = window.stockProducts.find(p => p.id == s.product_id);
+                if (product) {
+                    let subcat = window.subcategoriesData.find(sc => sc.id == product.subcategory_id);
+                    return subcat ? subcat.name : null;
+                }
+                return null;
+            }).filter(Boolean)
+        )];
         
-        let productOptions = '<option value="">📦 Tous les produits</option>';
-        for (let p of uniqueProducts) productOptions += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`;
+        let subcategoryOptions = '<option value="">📂 Toutes les sous-catégories</option>';
+        for (let sc of uniqueSubcategories) {
+            subcategoryOptions += `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`;
+        }
         
         let supplierOptions = '<option value="">🏭 Tous les fournisseurs</option>';
-        for (let s of uniqueSuppliers) supplierOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+        for (let s of [...new Set(stock.map(s => s.supplier_name).filter(Boolean))]) {
+            supplierOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+        }
         
         // 📅 Définir les dates par défaut selon le rôle
         let today = new Date();
         let startDateStr, endDateStr;
         
         if (isAdmin) {
-            // Admin : voit le mois en cours
             let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
             startDateStr = firstDay.toISOString().split('T')[0];
             endDateStr = today.toISOString().split('T')[0];
         } else {
-            // Vendeur : voit seulement les 2 derniers jours
             let twoDaysAgo = new Date(today);
             twoDaysAgo.setDate(today.getDate() - 2);
             startDateStr = twoDaysAgo.toISOString().split('T')[0];
@@ -1408,17 +1420,15 @@ async function loadStockIn() {
                         <input type="date" id="filterEndDate" ${!isAdmin ? 'readonly' : ''}>
                     </div>
                     <div class="filter-group">
-                        <label>📦 Produit</label>
-                        <select id="filterProduct">
-                            <option value="">Tous les produits</option>
-                            ${uniqueProducts.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('')}
+                        <label>📂 Sous-catégorie</label>
+                        <select id="filterSubcategory">
+                            ${subcategoryOptions}
                         </select>
                     </div>
                     <div class="filter-group">
                         <label>🏭 Fournisseur</label>
                         <select id="filterSupplier">
-                            <option value="">Tous les fournisseurs</option>
-                            ${uniqueSuppliers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                            ${supplierOptions}
                         </select>
                     </div>
                     <button class="btn-reset" onclick="resetFilters()">🔄 Réinitialiser</button>
@@ -1439,7 +1449,6 @@ async function loadStockIn() {
         if (startDateInput) startDateInput.value = startDateStr;
         if (endDateInput) endDateInput.value = endDateStr;
         
-        // Pour les vendeurs, désactiver la modification des dates
         if (!isAdmin) {
             if (startDateInput) startDateInput.disabled = true;
             if (endDateInput) endDateInput.disabled = true;
@@ -1450,10 +1459,9 @@ async function loadStockIn() {
         document.getElementById('filterStartDate').oninput = () => applyFilters();
         document.getElementById('filterEndDate').onchange = () => applyFilters();
         document.getElementById('filterEndDate').oninput = () => applyFilters();
-        document.getElementById('filterProduct').onchange = () => applyFilters();
+        document.getElementById('filterSubcategory').onchange = () => applyFilters();
         document.getElementById('filterSupplier').onchange = () => applyFilters();
         
-        // Afficher les données
         applyFilters();
         
     } catch(e) {
@@ -1464,14 +1472,12 @@ async function loadStockIn() {
 function applyFilters() {
     let startDate = document.getElementById('filterStartDate')?.value || '';
     let endDate = document.getElementById('filterEndDate')?.value || '';
-    let productName = document.getElementById('filterProduct')?.value || '';
+    let subcategoryName = document.getElementById('filterSubcategory')?.value || '';
     let supplierName = document.getElementById('filterSupplier')?.value || '';
     
-    // 🔐 Vérifier le rôle
     let userRole = '{{ session.role }}';
     let isAdmin = (userRole === 'admin');
     
-    // Si vendeur, forcer les dates à 2 jours max
     if (!isAdmin) {
         let today = new Date();
         let twoDaysAgo = new Date(today);
@@ -1494,6 +1500,7 @@ function applyFilters() {
     
     let filtered = [...window.allStockData];
     
+    // Filtre par date
     if (startDate) {
         filtered = filtered.filter(s => {
             if (!s.date) return false;
@@ -1510,19 +1517,52 @@ function applyFilters() {
         });
     }
     
-    if (productName) filtered = filtered.filter(s => s.product_name === productName);
-    if (supplierName) filtered = filtered.filter(s => s.supplier_name === supplierName);
+    // Filtre par sous-catégorie
+    if (subcategoryName) {
+        filtered = filtered.filter(s => {
+            let product = window.stockProducts.find(p => p.id == s.product_id);
+            if (product) {
+                let subcat = window.subcategoriesData.find(sc => sc.id == product.subcategory_id);
+                return subcat && subcat.name === subcategoryName;
+            }
+            return false;
+        });
+    }
+    
+    // Filtre par fournisseur
+    if (supplierName) {
+        filtered = filtered.filter(s => s.supplier_name === supplierName);
+    }
     
     updateDisplay(filtered);
 }
 function resetFilters() {
-    let today = new Date();
-    let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    let userRole = '{{ session.role }}';
+    let isAdmin = (userRole === 'admin');
     
-    document.getElementById('filterStartDate').value = firstDay.toISOString().split('T')[0];
-    document.getElementById('filterEndDate').value = today.toISOString().split('T')[0];
-    document.getElementById('filterProduct').value = '';
-    document.getElementById('filterSupplier').value = '';
+    let today = new Date();
+    let startDateStr, endDateStr;
+    
+    if (isAdmin) {
+        let firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        startDateStr = firstDay.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    } else {
+        let twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(today.getDate() - 2);
+        startDateStr = twoDaysAgo.toISOString().split('T')[0];
+        endDateStr = today.toISOString().split('T')[0];
+    }
+    
+    let startDateInput = document.getElementById('filterStartDate');
+    let endDateInput = document.getElementById('filterEndDate');
+    let subcategorySelect = document.getElementById('filterSubcategory');
+    let supplierSelect = document.getElementById('filterSupplier');
+    
+    if (startDateInput) startDateInput.value = startDateStr;
+    if (endDateInput) endDateInput.value = endDateStr;
+    if (subcategorySelect) subcategorySelect.value = '';
+    if (supplierSelect) supplierSelect.value = '';
     
     applyFilters();
 }
