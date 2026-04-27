@@ -10,6 +10,8 @@ import hashlib
 import json
 import os
 import uuid
+import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from functools import wraps
 
@@ -84,6 +86,50 @@ else:
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'new_decors_secret_key_2024')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+
+# ==================== LOGGING ====================
+LOG_DIR = os.environ.get('LOG_DIR', 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Handler fichier : erreurs uniquement, rotation à 5 Mo, garde 5 fichiers
+file_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, 'error.log'),
+    maxBytes=5 * 1024 * 1024,
+    backupCount=5,
+    encoding='utf-8'
+)
+file_handler.setLevel(logging.ERROR)
+file_handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+))
+
+# Handler fichier : tout (INFO+), pour le suivi général
+info_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, 'app.log'),
+    maxBytes=5 * 1024 * 1024,
+    backupCount=3,
+    encoding='utf-8'
+)
+info_handler.setLevel(logging.INFO)
+info_handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(levelname)s: %(message)s'
+))
+
+app.logger.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+app.logger.addHandler(info_handler)
+
+# Capturer aussi les exceptions non gérées
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error('Erreur 500: %s', error, exc_info=True)
+    return jsonify({'error': 'Erreur interne du serveur'}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    app.logger.warning('Erreur 404: %s', request.url)
+    return jsonify({'error': 'Page introuvable'}), 404
+# =================================================
 #  LE CACHE
 app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300
